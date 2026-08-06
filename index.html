@@ -5765,6 +5765,33 @@ html += `</div>`;
         setTimeout(() => observeHalaman(), 500);
       }).catch(e => { alert('ERROR: ' + e.message); });
     }
+
+    // ── Auto-save untuk field kata (kode, arab, makna indo/jawa, geser) ──
+    // Sebelumnya field-field ini TIDAK ter-cover auto-save sama sekali —
+    // cuma tersimpan kalau tombol "💾 Simpan" ditekan manual. Pakai
+    // event delegation di container supaya otomatis meng-cover baris
+    // yang ditambah belakangan juga (tanpa perlu ubah tiap fungsi
+    // pembuat baris satu-satu).
+    document.getElementById('containerHalaman').addEventListener('input', (e) => {
+      if (e.target.matches('.kode-input, .arab-input, .makna-indo, .makna-jawa, .geser-pegon-input')) {
+        simpan();
+      }
+    });
+
+    // ── Simpan instan saat pindah app / tab disembunyikan ───────────
+    // simpan() normal nunggu 1.5 detik (debounce) — kalau pindah app
+    // persis di jendela waktu itu, data belum sempat ke-save dan bisa
+    // hilang kalau tab di-reload OS. visibilitychange menangkap momen
+    // "mau pindah" itu dan langsung simpan tanpa nunggu debounce.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        clearTimeout(_simpanTimer);
+        simpanDB(ambilSemuaData()).catch(() => {
+          try { localStorage.setItem('gandul_data', JSON.stringify(ambilSemuaData())); } catch(e) {}
+        });
+      }
+    });
+
     init();
   </script>
   <script>
