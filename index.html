@@ -3,6 +3,9 @@
 
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <link rel="manifest" href="manifest.json">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
   <meta name="google" content="notranslate">
@@ -5760,73 +5763,12 @@ html += `</div>`;
     function init() {
       muat().then(berhasil => {
         if (!berhasil) {
-          tambahHalaman([{
-            namaBab: 'Al-Fatihah',
-            kataList: [{
-                kode: '',
-                arab: 'بِسْمِ',
-                maknaIndo: 'دڠن نام',
-                maknaJawa: 'کلوان اسما',
-                nomor: ''
-              },
-              {
-                kode: '',
-                arab: 'اللهِ',
-                maknaIndo: 'الله',
-                maknaJawa: 'الله',
-                nomor: ''
-              },
-              {
-                kode: '',
-                arab: 'الرَّحْمَنِ',
-                maknaIndo: 'يڠ مها ڤڠاسيه',
-                maknaJawa: 'کڠ مها مرم',
-                nomor: ''
-              },
-              {
-                kode: '',
-                arab: 'الرَّحِيمِ',
-                maknaIndo: 'يڠ مها ڤڽاياڠ',
-                maknaJawa: 'کڠ مها اسيه',
-                nomor: '١'
-              },
-              {
-                kode: 'م',
-                arab: 'اَلْحَمْدُ',
-                maknaIndo: 'سيݢالا ڤوجي',
-                maknaJawa: 'سيگال ڤوجي',
-                nomor: ''
-              },
-              {
-                kode: 'خ جم',
-                arab: 'لِلّٰهِ',
-                maknaIndo: 'باݢي الله',
-                maknaJawa: 'کاڠ الله',
-                nomor: ''
-              },
-              {
-                kode: 'ص ١',
-                arab: 'رَبِّ الْعَالَمِيْنَ',
-                maknaIndo: 'توهان سيميستا عالم',
-                maknaJawa: 'توهانيڤون عالم',
-                nomor: '٢'
-              },
-              {
-                kode: '[١]',
-                arab: 'الرَّحْمَنِ',
-                maknaIndo: 'يڠ مها ڤڠاسيه',
-                maknaJawa: 'کڠ مها مرم',
-                nomor: ''
-              },
-              {
-                kode: '...',
-                arab: 'الرَّحِيمِ',
-                maknaIndo: 'يڠ مها ڤڽاياڠ',
-                maknaJawa: 'کڠ مها اسيه',
-                nomor: '٣'
-              },
-            ]
-          }], "Contoh catatan nahwu: بِسْمِ adalah jar-majrur...");
+          // Dulu di sini ada demo Bismillah bawaan Ar-Risalah — dihapus,
+          // karena berisiko: kalau Firestore belum berhasil simpan,
+          // fallback ini muncul FRESH tiap reload dan bisa membuat
+          // edit yang belum tersimpan kelihatan "hilang diganti".
+          // Sekarang mulai dari halaman kosong, siap diisi langsung.
+          tambahHalaman();
         }
         updateNavInput();
         updateNavHasil([]);
