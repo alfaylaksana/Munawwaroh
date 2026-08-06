@@ -2016,14 +2016,14 @@ body.mode-html-aktif .hasil-kotak {
 
     .btn-float {
       pointer-events: auto;
-      height: 40px;
-      padding: 0 14px;
+      height: 24px;
+      padding: 0 8px;
       background: #f5edd5;
       color: #7a5a20;
       border: 1px solid #c9a84c;
-      border-radius: 20px;
+      border-radius: 12px;
       font-family: Georgia, serif;
-      font-size: 13px;
+      font-size: 8px;
       cursor: pointer;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
       transition: opacity 0.5s, background 0.2s;
@@ -2032,13 +2032,13 @@ body.mode-html-aktif .hasil-kotak {
     }
 
     .btn-float.bulat {
-      width: 40px;
+      width: 24px;
       padding: 0;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 18px;
+      font-size: 11px;
     }
 
 
@@ -2730,6 +2730,8 @@ body.mode-html-aktif .hasil-kotak {
         <button class="drop-item" onclick="simpan();tutupDropdown()">💾 Simpan</button>
         <button class="drop-item" onclick="exportJSON();tutupDropdown()">📤 Export JSON</button>
         <label class="drop-item" style="cursor:pointer;">📥 Import JSON<input type="file" accept=".json" onchange="importJSON(event)" style="display:none;" /></label>
+        <div class="dropdown-divider"></div>
+        <button class="drop-item" onclick="bersihkanSemuaPegonJawa();tutupDropdown()">🧹 Bersihkan Semua Pegon Jawa</button>
       </div>
     </div>
     <button class="btn-tool" onclick="tampilkanPdfHint()">📄 Simpan PDF</button>
@@ -5318,6 +5320,16 @@ html += `</div>`;
     // ─────────────────────────────────────────────────────────────
 
     let _simpanTimer = null;
+    function bersihkanSemuaPegonJawa() {
+      const semuaField = document.querySelectorAll('.makna-jawa, .s-jawa');
+      const terisi = Array.from(semuaField).filter(el => el.value.trim() !== '');
+      if (terisi.length === 0) { alert('Tidak ada isi Pegon Jawa untuk dibersihkan.'); return; }
+      if (!confirm(`Kosongkan ${terisi.length} field Pegon Jawa (data lama)? Makna Indo dan data lain TIDAK ikut terhapus.`)) return;
+      terisi.forEach(el => { el.value = ''; });
+      simpan();
+      alert(`${terisi.length} field Pegon Jawa sudah dikosongkan.`);
+    }
+
     function simpan() {
       clearTimeout(_simpanTimer);
       _simpanTimer = setTimeout(() => {
