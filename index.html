@@ -2815,6 +2815,9 @@ body.mode-html-aktif .hasil-kotak {
             <button class="float-drop-item" onclick="exportJSON();tutupFloatDropdown()">📤 Export JSON</button>
             <label class="float-drop-item" style="cursor:pointer;">📥 Import JSON<input type="file" accept=".json" onchange="importJSON(event)" style="display:none;" /></label>
             <button class="float-drop-item" onclick="bukaModalGabung();tutupFloatDropdown()">🔗 Gabung JSON</button>
+            <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
+            <button class="float-drop-item" onclick="bersihkanSemuaPegonJawa();tutupFloatDropdown()">🧹 Bersihkan Pegon Jawa</button>
+            <button class="float-drop-item" onclick="cekPulihkanCadangan();tutupFloatDropdown()">🔄 Cek Cadangan Lokal</button>
           </div>
         </div>
         <button class="btn-float bulat" onclick="tampilkan('pdf')" title="Tampilkan PDF" style="font-size:9px;font-weight:bold;letter-spacing:0.5px;">PDF</button>
