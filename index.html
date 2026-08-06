@@ -387,7 +387,7 @@
         grid-column: 1;
         grid-row: 2;
       }
-      td.col-indo::before { content: 'Pegon Indo'; }
+      td.col-indo::before { content: 'Makna Indo'; }
       td.col-jawa {
         grid-column: 2;
         grid-row: 2;
@@ -2722,8 +2722,6 @@ body.mode-html-aktif .hasil-kotak {
         <div class="dropdown-divider"></div>
         <button class="drop-item" id="togPegon" onclick="togglePegon();tutupDropdown()">Sembunyikan Pegon</button>
         <button class="drop-item" id="togKode" onclick="toggleKode();tutupDropdown()">Sembunyikan Kode</button>
-        <div class="dropdown-divider"></div>
-        <button class="drop-item" id="togBahasa" onclick="toggleBahasa();tutupDropdown()">Pegon Jawa</button>
       </div>
     </div>
     <div class="dropdown">
@@ -2793,8 +2791,6 @@ body.mode-html-aktif .hasil-kotak {
             <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
             <button class="float-drop-item" id="togPegonFloat" onclick="togglePegon();tutupFloatDropdown()">Sembunyikan Pegon</button>
             <button class="float-drop-item" id="togKodeFloat" onclick="toggleKode();tutupFloatDropdown()">Sembunyikan Kode</button>
-            <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
-            <button class="float-drop-item" id="togBahasaFloat" onclick="toggleBahasa();tutupFloatDropdown()">Pegon Jawa</button>
             <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
             <div class="float-drop-label">Ukuran Teks</div>
             <div style="display:flex;gap:6px;padding:4px 8px;">
@@ -3567,11 +3563,8 @@ function gotoHalamanHasil() {
       if (btn) { btn.textContent = teks; btn.classList.toggle('aktif', pegonTersembunyi); }
       const btnF = document.getElementById('togPegonFloat');
       if (btnF) btnF.textContent = teks;
-      document.querySelectorAll('.pegon.indo').forEach(el => {
-        el.classList.toggle('tersembunyi', pegonTersembunyi || modeBahasa !== 'indo');
-      });
-      document.querySelectorAll('.pegon.jawa').forEach(el => {
-        el.classList.toggle('tersembunyi', pegonTersembunyi || modeBahasa !== 'jawa');
+      document.querySelectorAll('.pegon.indo, .pegon.jawa').forEach(el => {
+        el.classList.toggle('tersembunyi', pegonTersembunyi);
       });
     }
 
@@ -3583,21 +3576,6 @@ function gotoHalamanHasil() {
       const btn = document.getElementById('togKode');
       btn.textContent = kodeTersembunyi ? 'Tampilkan Kode' : 'Sembunyikan Kode';
       btn.classList.toggle('aktif', kodeTersembunyi);
-    }
-
-    function toggleBahasa() {
-      modeBahasa = modeBahasa === 'indo' ? 'jawa' : 'indo';
-      const teks = modeBahasa === 'indo' ? 'Pegon Jawa' : 'Pegon Indonesia';
-      const btn = document.getElementById('togBahasa');
-      if (btn) { btn.textContent = teks; btn.classList.toggle('aktif', modeBahasa === 'jawa'); }
-      const btnF = document.getElementById('togBahasaFloat');
-      if (btnF) btnF.textContent = teks;
-      document.querySelectorAll('.pegon.indo').forEach(el => {
-        el.classList.toggle('tersembunyi', modeBahasa !== 'indo' || pegonTersembunyi);
-      });
-      document.querySelectorAll('.pegon.jawa').forEach(el => {
-        el.classList.toggle('tersembunyi', modeBahasa !== 'jawa' || pegonTersembunyi);
-      });
     }
 
   function tambahHalaman(babList = [], nahwu = '', terjemahan = {}, overridePegon = '', overrideBaris = '', overrideNomHlm = 0, overrideColGap = '', lebarKolom = {}, overridePegonJawa = '', overrideMinKata = '', overridePengaliDefault = '', overrideRapat = '', judulNahwu = '') {
@@ -4407,7 +4385,7 @@ function tambahHalamanDaftarKode(data = {}) {
     <thead><tr>
   <th class="col-kode th-resizable" id="th-kode-${id}">Kode<span class="kode-hint">م · ١ · [١]</span><div class="col-resize-handle" onmousedown="mulaiResize(event,'kode',${id})" ontouchstart="mulaiResize(event,'kode',${id})"></div></th>
   <th class="col-arab th-resizable" id="th-arab-${id}">Kata Arab<div class="col-resize-handle" onmousedown="mulaiResize(event,'arab',${id})" ontouchstart="mulaiResize(event,'arab',${id})"></div></th>
-  <th class="col-indo th-resizable" id="th-indo-${id}">Pegon Indonesia<button class="toggle-pegon-kolom" onclick="toggleKolomPegon(${id})">⇄ Jawa</button><div class="col-resize-handle" onmousedown="mulaiResize(event,'indo',${id})" ontouchstart="mulaiResize(event,'indo',${id})"></div></th>
+  <th class="col-indo th-resizable" id="th-indo-${id}">Makna Indo<button class="toggle-pegon-kolom" onclick="toggleKolomPegon(${id})">⇄ Jawa</button><div class="col-resize-handle" onmousedown="mulaiResize(event,'indo',${id})" ontouchstart="mulaiResize(event,'indo',${id})"></div></th>
   <th class="col-jawa th-resizable" id="th-jawa-${id}" style="display:none;">Pegon Jawa<button class="toggle-pegon-kolom" onclick="toggleKolomPegon(${id})">⇄ Indo</button><div class="col-resize-handle" onmousedown="mulaiResize(event,'jawa',${id})" ontouchstart="mulaiResize(event,'jawa',${id})"></div></th>
   <th class="col-nom th-resizable" id="th-nom-${id}">No. Ayat<div class="col-resize-handle" onmousedown="mulaiResize(event,'nom',${id})" ontouchstart="mulaiResize(event,'nom',${id})" ></div></th>
   <th class="col-hapus"></th>
@@ -5068,7 +5046,6 @@ document.querySelectorAll('.halaman-input').forEach((hal, hIdx) => {
                   const geserPegon = item.querySelector('.s-geser')?.value || '';
                   if (!arab) return;
                   const arabTampil = prosesHarakat(arab);
-                  const showIndo = modeBahasa === 'indo';
                   const hiddenCls = pegonTersembunyi ? ' tersembunyi' : '';
                   const geser = geserPegon ? parseInt(geserPegon) : 0;
                   const geserStyle = geser ? `style="margin-right:${geser}px;"` : '';
@@ -5095,8 +5072,8 @@ document.querySelectorAll('.halaman-input').forEach((hal, hIdx) => {
                     <span class="arab" data-asli="${arab}">${arabTampil}</span>
                     <div class="bawah-kata">
                       ${rujukanRowHtml}
-                      <span class="pegon indo${hiddenCls}${showIndo?'':' tersembunyi'}" ${geserStyle} data-indo="${maknaIndo}" data-jawa="${maknaJawa}">${maknaIndo||maknaJawa}</span>
-                      <span class="pegon jawa${hiddenCls}${showIndo?' tersembunyi':''}" ${geserStyle} data-indo="${maknaIndo}" data-jawa="${maknaJawa}">${maknaJawa||maknaIndo}</span>
+                      <span class="pegon jawa${hiddenCls}" ${geserStyle} data-indo="${maknaIndo}" data-jawa="${maknaJawa}">${maknaJawa||maknaIndo}</span>
+                      <span class="pegon indo${hiddenCls}" ${geserStyle} data-indo="${maknaIndo}" data-jawa="${maknaJawa}">${maknaIndo||maknaJawa}</span>
                     </div>
                   </div>`;
                 });
@@ -5165,7 +5142,6 @@ if(arab&&(maknaIndo||maknaJawa))kataList.push({kode,arab,maknaIndo,maknaJawa,nom
             const arabTampil = prosesHarakat(item.arab);
             const zebra = index % 2 === 0 ? 'ganjil' : 'genap';
             const nomorHtml = item.nomor ? `<div class="nomor-ayat" onclick="event.stopPropagation(); togglePopupTerjemahan(this, '${item.nomor}')">${item.nomor}</div>` : '';
-            const showIndo = modeBahasa === 'indo';
             const geser = item.geserPegon ? parseInt(item.geserPegon) : 0;
             const geserStyle = geser ? `style="margin-right:${geser}px;"` : '';
             html += `<div class="kata-blok ${zebra}${item.nomor?' ada-nomor ujung-ayat':''}" onclick="lompatKeInput('${item.srcId}')" style="cursor:pointer;">
@@ -5173,8 +5149,8 @@ if(arab&&(maknaIndo||maknaJawa))kataList.push({kode,arab,maknaIndo,maknaJawa,nom
             <span class="arab" data-asli="${item.arab}">${arabTampil}</span>
             <div class="bawah-kata">
               ${rujukanRowHtml}
-              <span class="pegon indo${hiddenCls}${showIndo?'':' tersembunyi'}" ${geserStyle} data-indo="${item.maknaIndo}" data-jawa="${item.maknaJawa}">${item.maknaIndo || item.maknaJawa}</span>
-              <span class="pegon jawa${hiddenCls}${showIndo?' tersembunyi':''}" ${geserStyle} data-indo="${item.maknaIndo}" data-jawa="${item.maknaJawa}">${item.maknaJawa || item.maknaIndo}</span>
+              <span class="pegon jawa${hiddenCls}" ${geserStyle} data-indo="${item.maknaIndo}" data-jawa="${item.maknaJawa}">${item.maknaJawa || item.maknaIndo}</span>
+              <span class="pegon indo${hiddenCls}" ${geserStyle} data-indo="${item.maknaIndo}" data-jawa="${item.maknaJawa}">${item.maknaIndo || item.maknaJawa}</span>
             </div>
             ${nomorHtml}
           </div>`;
@@ -5705,13 +5681,10 @@ html += `</div>`;
       kataCounter = 0;
       pegonTersembunyi = false;
       kodeTersembunyi = false;
-      modeBahasa = 'indo';
       document.getElementById('togPegon').textContent = 'Sembunyikan Pegon';
       document.getElementById('togPegon').classList.remove('aktif');
       document.getElementById('togKode').textContent = 'Sembunyikan Kode';
       document.getElementById('togKode').classList.remove('aktif');
-      document.getElementById('togBahasa').textContent = 'Pegon Jawa';
-      document.getElementById('togBahasa').classList.remove('aktif');
       resetTampilan();
       init();
     }
