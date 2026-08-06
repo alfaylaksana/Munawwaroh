@@ -2129,6 +2129,11 @@ body.mode-html-aktif .hasil-kotak {
       opacity: 1;
     }
 
+    .notif.notif-peringatan {
+      background: #a83232;
+      font-weight: bold;
+    }
+
     .pdf-overlay {
       display: none;
       position: fixed;
@@ -2732,6 +2737,7 @@ body.mode-html-aktif .hasil-kotak {
         <label class="drop-item" style="cursor:pointer;">📥 Import JSON<input type="file" accept=".json" onchange="importJSON(event)" style="display:none;" /></label>
         <div class="dropdown-divider"></div>
         <button class="drop-item" onclick="bersihkanSemuaPegonJawa();tutupDropdown()">🧹 Bersihkan Semua Pegon Jawa</button>
+        <button class="drop-item" onclick="cekPulihkanCadangan();tutupDropdown()">🔄 Cek Cadangan Lokal</button>
       </div>
     </div>
     <button class="btn-tool" onclick="tampilkanPdfHint()">📄 Simpan PDF</button>
@@ -5320,6 +5326,43 @@ html += `</div>`;
     // ─────────────────────────────────────────────────────────────
 
     let _simpanTimer = null;
+    function hitungTotalKata(data) {
+      if (!data || !data.halamanList) return 0;
+      let total = 0;
+      data.halamanList.forEach(h => {
+        (h.babList || []).forEach(b => total += (b.kataList || []).length);
+        (h.baitList || []).forEach(b => total += (b.shatrList || []).length);
+      });
+      return total;
+    }
+
+    function cekPulihkanCadangan() {
+      let cadangan;
+      try {
+        const raw = localStorage.getItem('gandul_data');
+        if (!raw) { alert('Tidak ada cadangan lokal tersimpan di browser ini.'); return; }
+        cadangan = JSON.parse(raw);
+      } catch (e) {
+        alert('Cadangan lokal ada tapi rusak/tidak bisa dibaca: ' + e.message);
+        return;
+      }
+      const dataSekarang = ambilSemuaData();
+      const totalCadangan = hitungTotalKata(cadangan);
+      const totalSekarang = hitungTotalKata(dataSekarang);
+      const halamanCadangan = (cadangan.halamanList || []).length;
+      const halamanSekarang = (dataSekarang.halamanList || []).length;
+      const pesan = `Cadangan lokal ditemukan:\n` +
+        `- Cadangan: ${halamanCadangan} halaman, ${totalCadangan} kata\n` +
+        `- Yang sedang tampil: ${halamanSekarang} halaman, ${totalSekarang} kata\n\n` +
+        (totalCadangan > totalSekarang
+          ? 'Cadangan lokal ini kelihatannya LEBIH LENGKAP. Muat cadangan ini sekarang? (yang sedang tampil akan ditimpa — bisa dibatalkan kalau ragu)'
+          : 'Cadangan lokal ini kelihatannya TIDAK lebih lengkap dari yang sedang tampil. Tetap mau memuatnya?');
+      if (!confirm(pesan)) return;
+      terapkanData(cadangan);
+      simpan();
+      alert('Cadangan lokal sudah dimuat. Cek isinya, lalu pastikan tersimpan (perhatikan notifikasi "tersimpan").');
+    }
+
     function bersihkanSemuaPegonJawa() {
       const semuaField = document.querySelectorAll('.makna-jawa, .s-jawa');
       const terisi = Array.from(semuaField).filter(el => el.value.trim() !== '');
@@ -5335,19 +5378,29 @@ html += `</div>`;
       _simpanTimer = setTimeout(() => {
         const data = ambilSemuaData();
         simpanDB(data).then(() => {
-          const notif = document.getElementById('notif');
-          notif.classList.add('tampil');
-          setTimeout(() => notif.classList.remove('tampil'), 2000);
-        }).catch(() => {
-          // fallback localStorage jika IndexedDB gagal
+          tampilkanNotifSimpan('tersimpan', false);
+        }).catch((err) => {
+          // fallback localStorage jika Firestore gagal — TANDAI beda dari
+          // sukses biasa, supaya tidak mengira data aman di server padahal
+          // cuma tersimpan di browser ini saja.
+          console.warn('Simpan ke Firestore gagal, fallback ke localStorage:', err);
           try {
             localStorage.setItem('gandul_data', JSON.stringify(data));
-            const notif = document.getElementById('notif');
-            notif.classList.add('tampil');
-            setTimeout(() => notif.classList.remove('tampil'), 2000);
-          } catch(e) {}
+            tampilkanNotifSimpan('⚠️ tersimpan LOKAL saja (server gagal)', true);
+          } catch(e) {
+            tampilkanNotifSimpan('❌ GAGAL tersimpan!', true);
+          }
         });
       }, 1500);
+    }
+
+    function tampilkanNotifSimpan(teks, peringatan) {
+      const notif = document.getElementById('notif');
+      if (!notif) return;
+      notif.textContent = teks;
+      notif.classList.toggle('notif-peringatan', !!peringatan);
+      notif.classList.add('tampil');
+      setTimeout(() => notif.classList.remove('tampil'), peringatan ? 5000 : 2000);
     }
 
     function ambilSemuaData() {
