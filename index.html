@@ -1624,6 +1624,14 @@ body.mode-html-aktif .hasil-kotak {
   margin-top: 15px;
 }
 
+    .pemisah-baris {
+      flex-basis: 100%;
+      width: 0;
+      height: 0;
+      margin: 0;
+      padding: 0;
+    }
+
     .hasil-aliran {
       display: flex;
       flex-direction: row;
@@ -4246,7 +4254,7 @@ function tambahHalamanDaftarKode(data = {}) {
         btn = document.createElement('button');
         btn.id = 'btnKembaliHasil';
         btn.textContent = '↩ Kembali ke Hasil';
-        btn.style.cssText = 'position:fixed;bottom:80px;right:16px;z-index:9999;background:#c9a84c;color:#fff;border:1px solid #7a5a20;border-radius:12px;padding:0 8px;height:24px;font-size:8px;font-weight:bold;box-shadow:0 2px 8px rgba(0,0,0,0.25);cursor:pointer;';
+        btn.style.cssText = 'position:fixed;bottom:24px;right:16px;z-index:9999;background:#c9a84c;color:#fff;border:1px solid #7a5a20;border-radius:12px;padding:0 8px;height:24px;font-size:8px;font-weight:bold;box-shadow:0 2px 8px rgba(0,0,0,0.25);cursor:pointer;';
         btn.onclick = kembaliKeHasil;
         document.body.appendChild(btn);
       }
@@ -4425,7 +4433,7 @@ function tambahHalamanDaftarKode(data = {}) {
   <button class="btn-tambah-kata" style="background:#8b6914;" onclick="tambahKataAwal(${id})" title="Sisipkan kata baru di paling atas (mis. untuk Basmalah)">⇧ Sisipkan di Awal</button>
 `;
       container.appendChild(div);
-      if (kataList && kataList.length) kataList.forEach(d => tambahKata(id, d.arab, d.maknaIndo || d.makna || '', d.maknaJawa || '', d.kode || '', d.nomor || '', d.krKanan || false, d.geserPegon || ''));
+      if (kataList && kataList.length) kataList.forEach(d => tambahKata(id, d.arab, d.maknaIndo || d.makna || '', d.maknaJawa || '', d.kode || '', d.nomor || '', d.krKanan || false, d.geserPegon || '', d.paksaBaris || false));
       else tambahKata(id);
     }
 
@@ -4434,14 +4442,14 @@ function tambahHalamanDaftarKode(data = {}) {
         document.getElementById(id)?.remove();
     }
 
-    function tambahKata(babId, arab = '', maknaIndo = '', maknaJawa = '', kode = '', nomor = '', krKanan = false, geserPegon = '') {
+    function tambahKata(babId, arab = '', maknaIndo = '', maknaJawa = '', kode = '', nomor = '', krKanan = false, geserPegon = '', paksaBaris = false) {
       const tbody = document.getElementById('tbody-' + babId);
       if (!tbody) return;
       const id = kataCounter++;
       const tr = document.createElement('tr');
       tr.id = 'kata-' + id;
       tr.innerHTML = `
-      <td class="col-kode"><input class="kode-input" type="text" placeholder="م · ١ · [١]" value="${kode}" /><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="kr-kanan-cb" ${krKanan?'checked':''} style="width:12px;height:12px;"> KR→kanan</label><input class="geser-pegon-input" type="number" placeholder="Geser px" value="${geserPegon||''}" title="Geser Pegon (px): positif=kiri, negatif=kanan" style="width:54px;font-size:9px;margin-top:2px;border:1px solid #d4b87a;border-radius:3px;padding:1px 3px;color:#7a5a20;" /></td>
+      <td class="col-kode"><input class="kode-input" type="text" placeholder="م · ١ · [١]" value="${kode}" /><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="kr-kanan-cb" ${krKanan?'checked':''} style="width:12px;height:12px;"> KR→kanan</label><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="paksa-baris-cb" ${paksaBaris?'checked':''} style="width:12px;height:12px;"> ↵ Baris baru</label><input class="geser-pegon-input" type="number" placeholder="Geser px" value="${geserPegon||''}" title="Geser Pegon (px): positif=kiri, negatif=kanan" style="width:54px;font-size:9px;margin-top:2px;border:1px solid #d4b87a;border-radius:3px;padding:1px 3px;color:#7a5a20;" /></td>
       <td><input class="arab-input" type="text" placeholder="كَلِمَة" value="${arab}" /></td>
       <td class="col-indo td-indo-${babId}"><input class="makna-indo" type="text" placeholder="artinya..." value="${maknaIndo}" /></td>
 <td class="col-jawa td-jawa-${babId}"><input class="makna-jawa" type="text" placeholder="tegese..." value="${maknaJawa}" /></td>
@@ -4462,7 +4470,7 @@ function tambahHalamanDaftarKode(data = {}) {
       const tr = document.createElement('tr');
       tr.id = 'kata-' + id;
       tr.innerHTML = `
-      <td class="col-kode"><input class="kode-input" type="text" placeholder="م · ١ · [١]" value="" /><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="kr-kanan-cb" style="width:12px;height:12px;"> KR→kanan</label><input class="geser-pegon-input" type="number" placeholder="Geser px" value="" title="Geser Pegon (px): positif=kiri, negatif=kanan" style="width:54px;font-size:9px;margin-top:2px;border:1px solid #d4b87a;border-radius:3px;padding:1px 3px;color:#7a5a20;" /></td>
+      <td class="col-kode"><input class="kode-input" type="text" placeholder="م · ١ · [١]" value="" /><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="kr-kanan-cb" style="width:12px;height:12px;"> KR→kanan</label><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="paksa-baris-cb" style="width:12px;height:12px;"> ↵ Baris baru</label><input class="geser-pegon-input" type="number" placeholder="Geser px" value="" title="Geser Pegon (px): positif=kiri, negatif=kanan" style="width:54px;font-size:9px;margin-top:2px;border:1px solid #d4b87a;border-radius:3px;padding:1px 3px;color:#7a5a20;" /></td>
       <td><input class="arab-input" type="text" placeholder="كَلِمَة" value="" /></td>
       <td class="col-indo td-indo-${babId}"><input class="makna-indo" type="text" placeholder="artinya..." value="" /></td>
       <td class="col-jawa td-jawa-${babId}"><input class="makna-jawa" type="text" placeholder="tegese..." value="" /></td>
@@ -4496,7 +4504,7 @@ function tambahHalamanDaftarKode(data = {}) {
       const trBaru = document.createElement('tr');
       trBaru.id = 'kata-' + id;
       trBaru.innerHTML = `
-      <td class="col-kode"><input class="kode-input" type="text" placeholder="م · ١ · [١]" value="" /><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="kr-kanan-cb" style="width:12px;height:12px;"> KR→kanan</label><input class="geser-pegon-input" type="number" placeholder="Geser px" value="" title="Geser Pegon (px): positif=kiri, negatif=kanan" style="width:54px;font-size:9px;margin-top:2px;border:1px solid #d4b87a;border-radius:3px;padding:1px 3px;color:#7a5a20;" /></td>
+      <td class="col-kode"><input class="kode-input" type="text" placeholder="م · ١ · [١]" value="" /><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="kr-kanan-cb" style="width:12px;height:12px;"> KR→kanan</label><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="paksa-baris-cb" style="width:12px;height:12px;"> ↵ Baris baru</label><input class="geser-pegon-input" type="number" placeholder="Geser px" value="" title="Geser Pegon (px): positif=kiri, negatif=kanan" style="width:54px;font-size:9px;margin-top:2px;border:1px solid #d4b87a;border-radius:3px;padding:1px 3px;color:#7a5a20;" /></td>
       <td><input class="arab-input" type="text" placeholder="كَلِمَة" value="" /></td>
       <td class="col-indo td-indo-${babId}"><input class="makna-indo" type="text" placeholder="artinya..." value="" /></td>
       <td class="col-jawa td-jawa-${babId}"><input class="makna-jawa" type="text" placeholder="tegese..." value="" /></td>
@@ -5158,7 +5166,8 @@ document.querySelectorAll('.halaman-input').forEach((hal, hIdx) => {
             const maknaJawa=tr.querySelector('.makna-jawa').value.trim();
             const nomor=tr.querySelector('.nom-input').value.trim();
             const krKanan=tr.querySelector('.kr-kanan-cb')?.checked||false;
-if(arab)kataList.push({kode,arab,maknaIndo,maknaJawa,nomor,krKanan,belumAdaArti:!(maknaIndo||maknaJawa),geserPegon:tr.querySelector('.geser-pegon-input')?.value||'',srcId:tr.id});        
+            const paksaBaris=tr.querySelector('.paksa-baris-cb')?.checked||false;
+if(arab)kataList.push({kode,arab,maknaIndo,maknaJawa,nomor,krKanan,paksaBaris,belumAdaArti:!(maknaIndo||maknaJawa),geserPegon:tr.querySelector('.geser-pegon-input')?.value||'',srcId:tr.id});        
          });
           html += `<div class="hasil-bab-section">`;
           const judulIndo = bab.querySelector('.bab-judul-indo')?.value.trim() || '';
@@ -5216,7 +5225,7 @@ if(arab)kataList.push({kode,arab,maknaIndo,maknaJawa,nomor,krKanan,belumAdaArti:
               <span class="pegon indo${hiddenCls}" ${geserStyle} data-indo="${item.maknaIndo}" data-jawa="${item.maknaJawa}">${item.maknaIndo || item.maknaJawa}</span>`}
             </div>
             ${nomorHtml}
-          </div>`;
+          </div>${item.paksaBaris ? '<div class="pemisah-baris"></div>' : ''}`;
           });
           html += `</div></div>`;
         });
@@ -5560,6 +5569,7 @@ html += `</div>`;
               maknaJawa: tr.querySelector('.makna-jawa').value,
               nomor: tr.querySelector('.nom-input').value,
               krKanan: tr.querySelector('.kr-kanan-cb').checked,
+              paksaBaris: tr.querySelector('.paksa-baris-cb')?.checked || false,
               geserPegon: tr.querySelector('.geser-pegon-input')?.value || '',
             });
           });
