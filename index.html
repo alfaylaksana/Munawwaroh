@@ -5281,7 +5281,7 @@ html += `</div>`;
       return JSON.parse(JSON.stringify(obj));
     }
 
-    function simpanDB(data) {
+    function simpanDB(data, bersihkanLama = false) {
       if (!REF_PROFIL) return Promise.reject(new Error('Firestore tidak tersedia (gagal dimuat). Cek koneksi internet lalu muat ulang halaman.'));
       const halamanList = data.halamanList || [];
       const profil = Object.assign({}, data);
@@ -5294,8 +5294,14 @@ html += `</div>`;
       });
 
       return Promise.all(tugas).then(() => {
-        // Bersihkan dokumen halaman lama yang sudah tidak terpakai
-        // (misal setelah halaman dihapus dari kitab)
+        // Bersihkan dokumen halaman lama yang sudah tidak terpakai —
+        // HANYA kalau diminta eksplisit (bersihkanLama=true). Auto-save
+        // biasa (dari ketik/visibilitychange) TIDAK pernah minta ini,
+        // karena datanya berasal dari DOM yang mungkin belum lengkap
+        // ter-render (mis. baru selesai import) — kalau cleanup jalan
+        // otomatis di situasi itu, halaman yang sebenarnya masih ada
+        // bisa terhapus permanen padahal cuma belum sempat tampil.
+        if (!bersihkanLama) return;
         return REF_HALAMAN.get().then(snap => {
           const hapus = [];
           snap.forEach(doc => {
@@ -5714,7 +5720,7 @@ html += `</div>`;
         setTimeout(() => {
           try {
             const data = JSON.parse(e.target.result);
-            simpanDB(data).then(() => {
+            simpanDB(data, true).then(() => {
               try { localStorage.removeItem('gandul_data'); } catch(ex) {}
               notif.textContent = '✓ Tersimpan!';
               setTimeout(() => {
