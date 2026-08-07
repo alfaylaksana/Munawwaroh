@@ -2023,27 +2023,27 @@ body.mode-html-aktif .hasil-kotak {
       right: 0;
       display: flex;
       justify-content: space-between;
-      padding: 0 20px;
+      padding: 0 12px;
       pointer-events: none;
       z-index: 999;
     }
 
     .float-left {
       display: flex;
-      gap: 10px;
+      gap: 4px;
       align-items: center;
     }
 
     .float-right {
       display: flex;
-      gap: 10px;
+      gap: 4px;
       align-items: center;
     }
 
     .btn-float {
       pointer-events: auto;
       height: 24px;
-      padding: 0 8px;
+      padding: 0 5px;
       background: #f5edd5;
       color: #7a5a20;
       border: 1px solid #c9a84c;
@@ -2846,10 +2846,10 @@ body.mode-html-aktif .hasil-kotak {
             <button class="float-drop-item" onclick="cekPulihkanCadangan();tutupFloatDropdown()">🔄 Cek Cadangan Lokal</button>
           </div>
         </div>
-        <button class="btn-float bulat" onclick="tampilkan('pdf')" title="Tampilkan PDF" style="font-size:9px;font-weight:bold;letter-spacing:0.5px;">PDF</button>
-        <button class="btn-float bulat" onclick="tampilkan('html')" title="Tampilkan HTML" style="font-size:9px;font-weight:bold;letter-spacing:0.5px;">HTML</button>
+        <button class="btn-float bulat" onclick="tampilkan('pdf')" title="Tampilkan PDF" style="font-size:8px;font-weight:bold;letter-spacing:0.5px;">PDF</button>
+        <button class="btn-float bulat" onclick="tampilkan('html')" title="Tampilkan HTML" style="font-size:8px;font-weight:bold;letter-spacing:0.5px;">HTML</button>
+        <button class="btn-float bulat" id="btnTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Ke atas"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 48 48"><path d="M24,10 L34,21 L28,21 L28,30 L20,30 L20,21 L14,21 Z M14,33 L34,33 L34,36 L14,36 Z" fill="white" stroke="#111" stroke-width="2.5" stroke-linejoin="round"/></svg></button>
       </div>
-      <button class="btn-float bulat" id="btnTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Ke atas"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 48 48"><path d="M24,10 L34,21 L28,21 L28,30 L20,30 L20,21 L14,21 Z M14,33 L34,33 L34,36 L14,36 Z" fill="white" stroke="#111" stroke-width="2.5" stroke-linejoin="round"/></svg></button>
       <div class="float-dropdown">
         <button class="btn-float" id="btnNavInput" onclick="toggleFloatDropdown('menuNavInput')">≡ Input</button>
         <div class="float-dropdown-menu" id="menuNavInput">
@@ -4254,9 +4254,9 @@ function tambahHalamanDaftarKode(data = {}) {
         btn = document.createElement('button');
         btn.id = 'btnKembaliHasil';
         btn.textContent = '↩ Kembali ke Hasil';
-        btn.style.cssText = 'position:fixed;bottom:24px;right:16px;z-index:9999;background:#c9a84c;color:#fff;border:1px solid #7a5a20;border-radius:12px;padding:0 8px;height:24px;font-size:8px;font-weight:bold;box-shadow:0 2px 8px rgba(0,0,0,0.25);cursor:pointer;';
+        btn.style.cssText = 'background:#c9a84c;color:#fff;border:1px solid #7a5a20;border-radius:12px;padding:0 5px;height:24px;font-size:8px;font-weight:bold;box-shadow:0 2px 8px rgba(0,0,0,0.25);cursor:pointer;pointer-events:auto;white-space:nowrap;';
         btn.onclick = kembaliKeHasil;
-        document.body.appendChild(btn);
+        document.querySelector('.float-right').appendChild(btn);
       }
       btn.style.display = 'block';
     }
