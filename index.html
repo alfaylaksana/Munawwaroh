@@ -4400,13 +4400,14 @@ function tambahHalamanDaftarKode(data = {}) {
   <th class="col-kode th-resizable" id="th-kode-${id}">Kode<span class="kode-hint">م · ١ · [١]</span><div class="col-resize-handle" onmousedown="mulaiResize(event,'kode',${id})" ontouchstart="mulaiResize(event,'kode',${id})"></div></th>
   <th class="col-arab th-resizable" id="th-arab-${id}">Kata Arab<div class="col-resize-handle" onmousedown="mulaiResize(event,'arab',${id})" ontouchstart="mulaiResize(event,'arab',${id})"></div></th>
   <th class="col-indo th-resizable" id="th-indo-${id}">Makna Indo<button class="toggle-pegon-kolom" onclick="toggleKolomPegon(${id})">⇄ Jawa</button><div class="col-resize-handle" onmousedown="mulaiResize(event,'indo',${id})" ontouchstart="mulaiResize(event,'indo',${id})"></div></th>
-  <th class="col-jawa th-resizable" id="th-jawa-${id}" style="display:none;">Pegon Jawa<button class="toggle-pegon-kolom" onclick="toggleKolomPegon(${id})">⇄ Indo</button><div class="col-resize-handle" onmousedown="mulaiResize(event,'jawa',${id})" ontouchstart="mulaiResize(event,'jawa',${id})"></div></th>
+  <th class="col-jawa th-resizable" id="th-jawa-${id}">Pegon Jawa<button class="toggle-pegon-kolom" onclick="toggleKolomPegon(${id})" style="display:none;">⇄ Indo</button><div class="col-resize-handle" onmousedown="mulaiResize(event,'jawa',${id})" ontouchstart="mulaiResize(event,'jawa',${id})"></div></th>
   <th class="col-nom th-resizable" id="th-nom-${id}">No. Ayat<div class="col-resize-handle" onmousedown="mulaiResize(event,'nom',${id})" ontouchstart="mulaiResize(event,'nom',${id})" ></div></th>
   <th class="col-hapus"></th>
 </tr></thead>
     <tbody id="tbody-${id}"></tbody>
   </table>
   <button class="btn-tambah-kata" onclick="tambahKata(${id})">+ Tambah Kata</button>
+  <button class="btn-tambah-kata" style="background:#8b6914;" onclick="tambahKataAwal(${id})" title="Sisipkan kata baru di paling atas (mis. untuk Basmalah)">⇧ Sisipkan di Awal</button>
 `;
       container.appendChild(div);
       if (kataList && kataList.length) kataList.forEach(d => tambahKata(id, d.arab, d.maknaIndo || d.makna || '', d.maknaJawa || '', d.kode || '', d.nomor || '', d.krKanan || false, d.geserPegon || ''));
@@ -4428,7 +4429,7 @@ function tambahHalamanDaftarKode(data = {}) {
       <td class="col-kode"><input class="kode-input" type="text" placeholder="م · ١ · [١]" value="${kode}" /><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="kr-kanan-cb" ${krKanan?'checked':''} style="width:12px;height:12px;"> KR→kanan</label><input class="geser-pegon-input" type="number" placeholder="Geser px" value="${geserPegon||''}" title="Geser Pegon (px): positif=kiri, negatif=kanan" style="width:54px;font-size:9px;margin-top:2px;border:1px solid #d4b87a;border-radius:3px;padding:1px 3px;color:#7a5a20;" /></td>
       <td><input class="arab-input" type="text" placeholder="كَلِمَة" value="${arab}" /></td>
       <td class="col-indo td-indo-${babId}"><input class="makna-indo" type="text" placeholder="artinya..." value="${maknaIndo}" /></td>
-<td class="col-jawa td-jawa-${babId}" style="display:none;"><input class="makna-jawa" type="text" placeholder="tegese..." value="${maknaJawa}" /></td>
+<td class="col-jawa td-jawa-${babId}"><input class="makna-jawa" type="text" placeholder="tegese..." value="${maknaJawa}" /></td>
       <td class="col-nom"><input class="nom-input" type="text" placeholder="١" value="${nomor}" oninput="simpan()" /><button type="button" onclick="gabungNomorIni(this)" title="Hapus nomor ini & geser mundur semua nomor setelahnya di seluruh kitab" style="display:block;width:100%;font-size:9px;margin-top:2px;padding:1px;border:1px solid #d4b87a;border-radius:3px;background:#fff3d0;color:#7a5a20;">🔢 Gabung</button></td>
       <td class="col-hapus">
       <button onclick="pecahBab('kata-${id}')">✂</button>
@@ -4437,6 +4438,37 @@ function tambahHalamanDaftarKode(data = {}) {
 </td>
     `;
       tbody.appendChild(tr);
+    }
+
+    function tambahKataAwal(babId) {
+      const tbody = document.getElementById('tbody-' + babId);
+      if (!tbody) return;
+      const id = kataCounter++;
+      const tr = document.createElement('tr');
+      tr.id = 'kata-' + id;
+      tr.innerHTML = `
+      <td class="col-kode"><input class="kode-input" type="text" placeholder="م · ١ · [١]" value="" /><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="kr-kanan-cb" style="width:12px;height:12px;"> KR→kanan</label><input class="geser-pegon-input" type="number" placeholder="Geser px" value="" title="Geser Pegon (px): positif=kiri, negatif=kanan" style="width:54px;font-size:9px;margin-top:2px;border:1px solid #d4b87a;border-radius:3px;padding:1px 3px;color:#7a5a20;" /></td>
+      <td><input class="arab-input" type="text" placeholder="كَلِمَة" value="" /></td>
+      <td class="col-indo td-indo-${babId}"><input class="makna-indo" type="text" placeholder="artinya..." value="" /></td>
+      <td class="col-jawa td-jawa-${babId}"><input class="makna-jawa" type="text" placeholder="tegese..." value="" /></td>
+      <td class="col-nom"><input class="nom-input" type="text" placeholder="١" value="" /><button type="button" onclick="gabungNomorIni(this)" title="Hapus nomor ini & geser mundur semua nomor setelahnya di seluruh kitab" style="display:block;width:100%;font-size:9px;margin-top:2px;padding:1px;border:1px solid #d4b87a;border-radius:3px;background:#fff3d0;color:#7a5a20;">🔢 Gabung</button></td>
+      <td class="col-hapus">
+      <button onclick="pecahBab('kata-${id}')">✂</button>
+      <button onclick="insertKata('kata-${id}')" title="Sisipkan baris baru di bawah ini">＋</button>
+      <button onclick="hapusKata('kata-${id}')">✕</button>
+</td>
+    `;
+      // Selalu masuk di posisi PALING ATAS — kalau nyisipkan beberapa kata
+      // berurutan (mis. Basmalah 4 kata), tiap kata baru otomatis nempel
+      // TEPAT SETELAH kata yang barusan disisipkan lewat tombol ini,
+      // jadi ketiknya bisa urutan normal (bukan terbalik).
+      if (tambahKataAwal._terakhir && tambahKataAwal._terakhir.babId === babId && tbody.contains(tambahKataAwal._terakhir.el)) {
+        tambahKataAwal._terakhir.el.after(tr);
+      } else {
+        tbody.insertBefore(tr, tbody.firstChild);
+      }
+      tambahKataAwal._terakhir = { babId, el: tr };
+      tr.querySelector('.arab-input')?.focus();
     }
 
     function insertKata(kataId) {
@@ -4452,7 +4484,7 @@ function tambahHalamanDaftarKode(data = {}) {
       <td class="col-kode"><input class="kode-input" type="text" placeholder="م · ١ · [١]" value="" /><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="kr-kanan-cb" style="width:12px;height:12px;"> KR→kanan</label><input class="geser-pegon-input" type="number" placeholder="Geser px" value="" title="Geser Pegon (px): positif=kiri, negatif=kanan" style="width:54px;font-size:9px;margin-top:2px;border:1px solid #d4b87a;border-radius:3px;padding:1px 3px;color:#7a5a20;" /></td>
       <td><input class="arab-input" type="text" placeholder="كَلِمَة" value="" /></td>
       <td class="col-indo td-indo-${babId}"><input class="makna-indo" type="text" placeholder="artinya..." value="" /></td>
-      <td class="col-jawa td-jawa-${babId}" style="display:none;"><input class="makna-jawa" type="text" placeholder="tegese..." value="" /></td>
+      <td class="col-jawa td-jawa-${babId}"><input class="makna-jawa" type="text" placeholder="tegese..." value="" /></td>
       <td class="col-nom"><input class="nom-input" type="text" placeholder="١" value="" /></td>
       <td class="col-hapus">
       <button onclick="pecahBab('kata-${id}')">✂</button>
