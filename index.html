@@ -1647,6 +1647,21 @@ body.mode-html-aktif .hasil-kotak {
       position: relative;
       padding-right: 11px;
   }
+
+    .kata-blok.belum-ada-arti .arab {
+      background: #ffe0e0;
+      border-radius: 3px;
+      padding: 0 2px;
+    }
+    .pegon.indo.belum-isi {
+      color: #c0392b;
+      font-style: italic;
+      font-size: 10px;
+      direction: ltr;
+      text-align: left;
+      transform: none;
+      margin-top: 2px;
+    }
     
      /* separator dihilangkan — spasi antar kata sudah cukup */
     
@@ -5143,7 +5158,7 @@ document.querySelectorAll('.halaman-input').forEach((hal, hIdx) => {
             const maknaJawa=tr.querySelector('.makna-jawa').value.trim();
             const nomor=tr.querySelector('.nom-input').value.trim();
             const krKanan=tr.querySelector('.kr-kanan-cb')?.checked||false;
-if(arab&&(maknaIndo||maknaJawa))kataList.push({kode,arab,maknaIndo,maknaJawa,nomor,krKanan,geserPegon:tr.querySelector('.geser-pegon-input')?.value||'',srcId:tr.id});        
+if(arab)kataList.push({kode,arab,maknaIndo,maknaJawa,nomor,krKanan,belumAdaArti:!(maknaIndo||maknaJawa),geserPegon:tr.querySelector('.geser-pegon-input')?.value||'',srcId:tr.id});        
          });
           html += `<div class="hasil-bab-section">`;
           const judulIndo = bab.querySelector('.bab-judul-indo')?.value.trim() || '';
@@ -5190,13 +5205,15 @@ if(arab&&(maknaIndo||maknaJawa))kataList.push({kode,arab,maknaIndo,maknaJawa,nom
             const nomorHtml = item.nomor ? `<div class="nomor-ayat" onclick="event.stopPropagation(); togglePopupTerjemahan(this, '${item.nomor}')">${item.nomor}</div>` : '';
             const geser = item.geserPegon ? parseInt(item.geserPegon) : 0;
             const geserStyle = geser ? `style="margin-right:${geser}px;"` : '';
-            html += `<div class="kata-blok ${zebra}${item.nomor?' ada-nomor ujung-ayat':''}" onclick="lompatKeInput('${item.srcId}')" style="cursor:pointer;">
+            html += `<div class="kata-blok ${zebra}${item.nomor?' ada-nomor ujung-ayat':''}${item.belumAdaArti?' belum-ada-arti':''}" onclick="lompatKeInput('${item.srcId}')" style="cursor:pointer;" title="${item.belumAdaArti?'Belum ada terjemahan':''}">
             ${kodeHtml}
             <span class="arab" data-asli="${item.arab}">${arabTampil}</span>
             <div class="bawah-kata">
               ${rujukanRowHtml}
-              <span class="pegon jawa${hiddenCls}" ${geserStyle} data-indo="${item.maknaIndo}" data-jawa="${item.maknaJawa}">${item.maknaJawa || item.maknaIndo}</span>
-              <span class="pegon indo${hiddenCls}" ${geserStyle} data-indo="${item.maknaIndo}" data-jawa="${item.maknaJawa}">${item.maknaIndo || item.maknaJawa}</span>
+              ${item.belumAdaArti
+                ? `<span class="pegon indo belum-isi" ${geserStyle}>(belum ada arti)</span>`
+                : `<span class="pegon jawa${hiddenCls}" ${geserStyle} data-indo="${item.maknaIndo}" data-jawa="${item.maknaJawa}">${item.maknaJawa || item.maknaIndo}</span>
+              <span class="pegon indo${hiddenCls}" ${geserStyle} data-indo="${item.maknaIndo}" data-jawa="${item.maknaJawa}">${item.maknaIndo || item.maknaJawa}</span>`}
             </div>
             ${nomorHtml}
           </div>`;
