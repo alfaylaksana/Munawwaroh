@@ -2950,6 +2950,7 @@ body.mode-html-aktif .hasil-kotak {
         <button class="drop-item" onclick="bersihkanSemuaPegonJawa();tutupDropdown()">🧹 Bersihkan Semua Pegon Jawa</button>
         <button class="drop-item" onclick="konversiSemuaNomorKeArab();tutupDropdown()">١٢٣ Konversi Nomor Ayat ke Arab</button>
         <button class="drop-item" onclick="deteksiNomorSurahSemuaBab();tutupDropdown()">📖 Deteksi No. Surah (cocokkan isi teks)</button>
+        <button class="drop-item" onclick="diagnosaBatasHalamanMushaf();tutupDropdown()">📄 Diagnosa Batas Halaman vs Mushaf Asli</button>
         <button class="drop-item" onclick="cekPulihkanCadangan();tutupDropdown()">🔄 Cek Cadangan Lokal</button>
       </div>
     </div>
@@ -5187,6 +5188,55 @@ function terapkanLebarKolom(halEl) {
         .trim();
     }
 
+    function diagnosaBatasHalamanMushaf() {
+      const semuaHalaman = document.querySelectorAll('.halaman-input');
+      if (!semuaHalaman.length) { alert('Belum ada Halaman sama sekali.'); return; }
+
+      let log = [];
+      let indexKonten = 0; // hanya hitung Halaman berisi Bab/kata sungguhan
+      semuaHalaman.forEach((halEl) => {
+        // Lewati tipe halaman non-konten (judul, pengantar, gambar, profil, dst)
+        if (halEl.classList.length > 1) return; // classList: 'halaman-input' + tipe lain
+        const babPertama = halEl.querySelector('.bab-input');
+        if (!babPertama) return; // halaman kosong / cuma syiir di awal, dilewati dari penomoran halaman fisik
+        indexKonten++;
+
+        const tbody = babPertama.querySelector('tbody');
+        const nomorSurah = babPertama.querySelector('.bab-nomor-surah')?.value.trim() || '';
+        if (!tbody || !nomorSurah) {
+          log.push(`Halaman-app ke-${indexKonten}: ⚠️ No. Surah Bab pertamanya belum diisi, dilewati.`);
+          return;
+        }
+        let ayahNum = null;
+        for (const tr of tbody.querySelectorAll('tr')) {
+          const arab = tr.querySelector('.arab-input')?.value.trim() || '';
+          const nomor = tr.querySelector('.nom-input')?.value.trim() || '';
+          if (!arab) continue;
+          if (nomor) { ayahNum = arabKeAngka(nomor); break; }
+        }
+        if (ayahNum === null) {
+          log.push(`Halaman-app ke-${indexKonten}: ⚠️ ayat pertama tidak ketemu nomornya.`);
+          return;
+        }
+
+        const idxHarapan = indexKonten - 1;
+        if (idxHarapan >= AWAL_HALAMAN_MUSHAF.length) {
+          log.push(`Halaman-app ke-${indexKonten}: ⚠️ sudah melebihi 23 halaman mushaf Juz 30 (mulai Surah ${nomorSurah} ayat ${ayahNum}) — cek apakah ada Halaman-app kosong yang perlu dihapus/gabung, atau memang datanya sudah lebih dari Juz 30.`);
+          return;
+        }
+        const harapan = AWAL_HALAMAN_MUSHAF[idxHarapan];
+        const cocok = (parseInt(nomorSurah) === harapan.surah && ayahNum === harapan.ayah);
+        if (cocok) {
+          log.push(`Halaman-app ke-${indexKonten}: ✅ pas — Halaman mushaf ${harapan.page} (Surah ${harapan.surah}:${harapan.ayah})`);
+        } else {
+          log.push(`Halaman-app ke-${indexKonten}: ❌ TIDAK PAS — mulai di Surah ${nomorSurah}:${ayahNum}, seharusnya Halaman mushaf ${harapan.page} mulai di Surah ${harapan.surah}:${harapan.ayah}`);
+        }
+      });
+
+      if (!log.length) { alert('Tidak ada Halaman berisi Bab yang bisa dicek.'); return; }
+      alert('Diagnosa batas Halaman vs Mushaf asli (Juz 30, hlm 582-604):\n\n' + log.join('\n') + '\n\nCatatan: ini cuma laporan, TIDAK mengubah data apa pun. Kalau ada yang ❌, perlu dirapikan manual (pindah kata antar Bab/Halaman) supaya pas dgn batas halaman mushaf asli.');
+    }
+
     function deteksiNomorSurahSemuaBab() {
       if (!dataUthmaniSiap) { alert('Data Utsmani (juz30-uthmani.json) belum berhasil dimuat. Coba lagi sebentar, pastikan file itu sudah ikut diupload satu folder dengan index.html.'); return; }
 
@@ -6386,6 +6436,33 @@ html += `</div>`;
     // diubah/ditimpa — tetap jadi sumber utama utk Mode Kajian & edit.
     let petaUthmani = {};
     let dataUthmaniSiap = false;
+    // Batas awal tiap halaman fisik Mushaf Madinah utk Juz 30 (hlm 582-604).
+    // {halaman mushaf: surah, ayat yang MEMULAI halaman itu}
+    const AWAL_HALAMAN_MUSHAF = [
+      { page: 582, surah: 78, ayah: 1 },
+      { page: 583, surah: 78, ayah: 31 },
+      { page: 584, surah: 79, ayah: 16 },
+      { page: 585, surah: 80, ayah: 1 },
+      { page: 586, surah: 81, ayah: 1 },
+      { page: 587, surah: 82, ayah: 1 },
+      { page: 588, surah: 83, ayah: 7 },
+      { page: 589, surah: 83, ayah: 35 },
+      { page: 590, surah: 85, ayah: 1 },
+      { page: 591, surah: 86, ayah: 1 },
+      { page: 592, surah: 87, ayah: 16 },
+      { page: 593, surah: 89, ayah: 1 },
+      { page: 594, surah: 89, ayah: 24 },
+      { page: 595, surah: 91, ayah: 1 },
+      { page: 596, surah: 92, ayah: 15 },
+      { page: 597, surah: 95, ayah: 1 },
+      { page: 598, surah: 97, ayah: 1 },
+      { page: 599, surah: 98, ayah: 8 },
+      { page: 600, surah: 100, ayah: 10 },
+      { page: 601, surah: 103, ayah: 1 },
+      { page: 602, surah: 106, ayah: 1 },
+      { page: 603, surah: 109, ayah: 1 },
+      { page: 604, surah: 112, ayah: 1 },
+    ];
     function muatDataUthmani() {
       fetch('./juz30-uthmani.json')
         .then(res => res.json())
