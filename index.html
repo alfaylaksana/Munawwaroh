@@ -2547,6 +2547,80 @@ body.mode-html-aktif .hasil-kotak {
   background: #f0e2b8;
 }
     
+.kartu-baca {
+  position: fixed;
+  background: #fffdf7;
+  border: 1px solid #c9a84c;
+  border-radius: 8px;
+  padding: 10px 12px;
+  box-shadow: 0 4px 16px rgba(100,70,20,0.28);
+  z-index: 9999;
+  font-family: Georgia, serif;
+  direction: ltr;
+  text-align: left;
+}
+
+.kartu-baca-baris {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px solid #f0e6c8;
+}
+
+.kartu-baca-baris:last-of-type { border-bottom: none; }
+
+.kartu-baca-label {
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #c9a84c;
+  flex-shrink: 0;
+}
+
+.kartu-baca-nilai {
+  font-size: 14px;
+  color: #1a1208;
+  text-align: right;
+}
+
+.kartu-baca-kosong {
+  font-size: 12px;
+  font-style: italic;
+  color: #a07840;
+  padding: 6px 0;
+  text-align: center;
+}
+
+.kartu-baca-aksi {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.kartu-baca-aksi button {
+  flex: 1;
+  font-size: 11px;
+  border-radius: 4px;
+  padding: 6px 0;
+  cursor: pointer;
+  font-family: Georgia, serif;
+}
+
+.btn-tutup-kartu {
+  background: #f5edd5;
+  color: #7a5a20;
+  border: 1px solid #c9a84c;
+}
+
+.btn-edit-kartu {
+  background: #c9a84c;
+  color: #fff;
+  border: 1px solid #7a5a20;
+  font-weight: bold;
+}
+
 .popup-edit-pegon {
   position: fixed;
   max-width: 94vw;
@@ -2819,8 +2893,10 @@ body.mode-html-aktif .hasil-kotak {
           <button class="btn-skala aktif-skala" id="dropBtnB" onclick="setSkala(1,'B');tutupDropdown()">B</button>
         </div>
         <div class="dropdown-divider"></div>
-        <button class="drop-item" id="togPegon" onclick="togglePegon();tutupDropdown()">Sembunyikan Pegon</button>
-        <button class="drop-item" id="togKode" onclick="toggleKode();tutupDropdown()">Sembunyikan Kode</button>
+        <button class="drop-item" id="btnModeBaca" onclick="toggleModeBaca();tutupDropdown()" style="font-weight:bold;color:#7a5a20;">📚 Ke Mode Kajian</button>
+        <div class="dropdown-divider"></div>
+        <button class="drop-item aktif" id="togPegon" onclick="togglePegon();tutupDropdown()">Tampilkan Pegon</button>
+        <button class="drop-item aktif" id="togKode" onclick="toggleKode();tutupDropdown()">Tampilkan Kode</button>
       </div>
     </div>
     <div class="dropdown">
@@ -2892,8 +2968,11 @@ body.mode-html-aktif .hasil-kotak {
             <button class="float-drop-item" onclick="setHarakat('irab');tutupFloatDropdown()">I'rab saja</button>
             <button class="float-drop-item" onclick="setHarakat('tanpa');tutupFloatDropdown()">Tanpa harakat</button>
             <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
-            <button class="float-drop-item" id="togPegonFloat" onclick="togglePegon();tutupFloatDropdown()">Sembunyikan Pegon</button>
-            <button class="float-drop-item" id="togKodeFloat" onclick="toggleKode();tutupFloatDropdown()">Sembunyikan Kode</button>
+            <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
+            <button class="float-drop-item" id="btnModeBacaFloat" onclick="toggleModeBaca();tutupFloatDropdown()" style="font-weight:bold;color:#7a5a20;">📚 Ke Mode Kajian</button>
+            <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
+            <button class="float-drop-item" id="togPegonFloat" onclick="togglePegon();tutupFloatDropdown()">Tampilkan Pegon</button>
+            <button class="float-drop-item" id="togKodeFloat" onclick="toggleKode();tutupFloatDropdown()">Tampilkan Kode</button>
             <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
             <div class="float-drop-label">Ukuran Teks</div>
             <div style="display:flex;gap:6px;padding:4px 8px;">
@@ -2995,8 +3074,8 @@ body.mode-html-aktif .hasil-kotak {
       kataCounter = 0;
     let modeHarakat = 'lengkap',
       modeBahasa = 'indo';
-    let pegonTersembunyi = false,
-      kodeTersembunyi = false;
+    let pegonTersembunyi = true,
+      kodeTersembunyi = true;
     let hideTimer = null,
       pindahBabId = null,
       halamanAktifId = null;;
@@ -3038,6 +3117,51 @@ function terapkanPengaliOverride(halamanInputEl, teksArabBersih, pengaliBaru) {
     }
     field.value = Object.entries(map).map(([k, v]) => `${k}:${v}`).join(', ');
   });
+}
+
+function bukaKartuBaca(event, srcId) {
+  event.stopPropagation();
+  document.querySelectorAll('.popup-edit-pegon, .kartu-baca').forEach(p => p.remove());
+
+  const row = document.getElementById(srcId);
+  if (!row) return;
+
+  const kode = (row.querySelector('.kode-input') || {}).value || '';
+  const maknaIndo = (row.querySelector('.makna-indo') || row.querySelector('.s-indo') || {}).value || '';
+  const maknaJawa = (row.querySelector('.makna-jawa') || row.querySelector('.s-jawa') || {}).value || '';
+
+  const el = event.currentTarget;
+  const kartu = document.createElement('div');
+  kartu.className = 'kartu-baca';
+  kartu.innerHTML = `
+    ${kode ? `<div class="kartu-baca-baris"><span class="kartu-baca-label">Kode</span><span class="kartu-baca-nilai" style="direction:rtl;">${kode}</span></div>` : ''}
+    ${maknaIndo ? `<div class="kartu-baca-baris"><span class="kartu-baca-label">Indo</span><span class="kartu-baca-nilai">${maknaIndo}</span></div>` : ''}
+    ${maknaJawa ? `<div class="kartu-baca-baris"><span class="kartu-baca-label">Jawa</span><span class="kartu-baca-nilai" style="direction:rtl;">${maknaJawa}</span></div>` : ''}
+    ${(!kode && !maknaIndo && !maknaJawa) ? `<div class="kartu-baca-kosong">Belum ada catatan untuk kata ini.</div>` : ''}
+    <div class="kartu-baca-aksi">
+      <button type="button" class="btn-tutup-kartu" onclick="document.querySelectorAll('.kartu-baca').forEach(k=>k.remove())">Tutup</button>
+      <button type="button" class="btn-edit-kartu" onclick="document.querySelectorAll('.kartu-baca').forEach(k=>k.remove()); bukaEditPegonInline(event,'${srcId}')">✏️ Edit</button>
+    </div>
+  `;
+  document.body.appendChild(kartu);
+
+  const rect = el.getBoundingClientRect();
+  const kartuW = Math.min(280, window.innerWidth * 0.85);
+  let left = rect.left + rect.width / 2 - kartuW / 2;
+  let top = rect.bottom + 8;
+  if (left + kartuW > window.innerWidth - 10) left = window.innerWidth - kartuW - 10;
+  if (left < 10) left = 10;
+  if (top + 160 > window.innerHeight) top = rect.top - 8 - 160;
+  if (top < 10) top = 10;
+  kartu.style.left = left + 'px';
+  kartu.style.top = top + 'px';
+  kartu.style.width = kartuW + 'px';
+
+  setTimeout(() => {
+    document.addEventListener('click', function handler(e) {
+      if (!kartu.contains(e.target)) kartu.remove();
+    }, { once: true, capture: true });
+  }, 250);
 }
 
 function bukaEditPegonInline(event, srcId) {
@@ -3791,10 +3915,11 @@ function gotoHalamanHasil() {
       const btn = document.getElementById('togPegon');
       if (btn) { btn.textContent = teks; btn.classList.toggle('aktif', pegonTersembunyi); }
       const btnF = document.getElementById('togPegonFloat');
-      if (btnF) btnF.textContent = teks;
+      if (btnF) { btnF.textContent = teks; btnF.classList.toggle('aktif', pegonTersembunyi); }
       document.querySelectorAll('.pegon.indo, .pegon.jawa').forEach(el => {
         el.classList.toggle('tersembunyi', pegonTersembunyi);
       });
+      updateLabelModeBaca();
     }
 
     function toggleKode() {
@@ -3802,9 +3927,35 @@ function gotoHalamanHasil() {
       document.querySelectorAll('.kode-wrapper,.kode-kosong,.rujukan-target,.rujukan-dhamir').forEach(el => {
         el.style.visibility = kodeTersembunyi ? 'hidden' : 'visible';
       });
+      const teks = kodeTersembunyi ? 'Tampilkan Kode' : 'Sembunyikan Kode';
       const btn = document.getElementById('togKode');
-      btn.textContent = kodeTersembunyi ? 'Tampilkan Kode' : 'Sembunyikan Kode';
+      btn.textContent = teks;
       btn.classList.toggle('aktif', kodeTersembunyi);
+      const btnF = document.getElementById('togKodeFloat');
+      if (btnF) { btnF.textContent = teks; btnF.classList.toggle('aktif', kodeTersembunyi); }
+      updateLabelModeBaca();
+    }
+
+    function toggleModeBaca() {
+      const modeBacaAktif = pegonTersembunyi && kodeTersembunyi;
+      if (modeBacaAktif) {
+        // sedang Mode Bacaan → pindah ke Mode Kajian (tampilkan semua)
+        if (pegonTersembunyi) togglePegon();
+        if (kodeTersembunyi) toggleKode();
+      } else {
+        // pindah ke Mode Bacaan (sembunyikan semua)
+        if (!pegonTersembunyi) togglePegon();
+        if (!kodeTersembunyi) toggleKode();
+      }
+    }
+
+    function updateLabelModeBaca() {
+      const modeBacaAktif = pegonTersembunyi && kodeTersembunyi;
+      const teks = modeBacaAktif ? '📚 Ke Mode Kajian' : '📖 Ke Mode Bacaan';
+      const btn = document.getElementById('btnModeBaca');
+      const btnF = document.getElementById('btnModeBacaFloat');
+      if (btn) btn.textContent = teks;
+      if (btnF) btnF.textContent = teks;
     }
 
   function tambahHalaman(babList = [], nahwu = '', terjemahan = {}, overridePegon = '', overrideBaris = '', overrideNomHlm = 0, overrideColGap = '', lebarKolom = {}, overridePegonJawa = '', overrideMinKata = '', overridePengaliDefault = '', overrideRapat = '', judulNahwu = '') {
@@ -5347,7 +5498,7 @@ document.querySelectorAll('.halaman-input').forEach((hal, hIdx) => {
                   } else {
                     rujukanRowHtml = `<div class="rujukan-kosong"></div>`;
                   }
-                  html += `<div class="syiir-kata-blok" onclick="if(!event.target.closest('.pegon')) lompatKeInput('${item.id}')" style="cursor:pointer;">
+                  html += `<div class="syiir-kata-blok" onclick="if (pegonTersembunyi && kodeTersembunyi) { bukaKartuBaca(event,'${item.id}'); } else if (!event.target.closest('.pegon')) { lompatKeInput('${item.id}'); }" style="cursor:pointer;">
                     ${kodeHtml}
                     <span class="arab" data-asli="${arab}">${arabTampil}</span>
                     <div class="bawah-kata">
@@ -5425,7 +5576,7 @@ if(arab)kataList.push({kode,arab,maknaIndo,maknaJawa,nomor,krKanan,paksaBaris,be
             const nomorHtml = item.nomor ? `<div class="nomor-ayat" onclick="event.stopPropagation(); togglePopupTerjemahan(this, '${item.nomor}')">${item.nomor}</div>` : '';
             const geser = item.geserPegon ? parseInt(item.geserPegon) : 0;
             const geserStyle = geser ? `style="margin-right:${geser}px;"` : '';
-            html += `<div class="kata-blok ${zebra}${item.nomor?' ada-nomor ujung-ayat':''}${item.belumAdaArti?' belum-ada-arti':''}" onclick="if(!event.target.closest('.pegon')) lompatKeInput('${item.srcId}')" style="cursor:pointer;" title="${item.belumAdaArti?'Belum ada terjemahan':''}">
+            html += `<div class="kata-blok ${zebra}${item.nomor?' ada-nomor ujung-ayat':''}${item.belumAdaArti?' belum-ada-arti':''}" onclick="if (pegonTersembunyi && kodeTersembunyi) { bukaKartuBaca(event,'${item.srcId}'); } else if (!event.target.closest('.pegon')) { lompatKeInput('${item.srcId}'); }" style="cursor:pointer;" title="${item.belumAdaArti?'Belum ada terjemahan':''}">
             ${kodeHtml}
             <span class="arab" data-asli="${item.arab}">${arabTampil}</span>
             <div class="bawah-kata">
