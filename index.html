@@ -4410,6 +4410,7 @@ function tambahHalamanDaftarKode(data = {}) {
     <div class="bab-aksi">
   <button class="btn-gabung-bab" onclick="gabungBab('bab-${id}')">⊕ Gabung</button>
   <button class="btn-pindah-bab" onclick="bukaPindahBab('bab-${id}')">⇄ Pindah</button>
+  <button class="btn-pindah-bab" id="btnTogglePegonBab-${id}" onclick="toggleKolomPegon(${id})">⇄ Pegon Jawa</button>
   <button class="btn-hapus-bab"  onclick="hapusBab('bab-${id}')">Hapus Bab</button>
   </div>
   <div class="bab-judul-grid">
@@ -4531,12 +4532,14 @@ function tambahHalamanDaftarKode(data = {}) {
   const thJawa = document.getElementById('th-jawa-' + babId);
   const tdIndo = document.querySelectorAll('.td-indo-' + babId);
   const tdJawa = document.querySelectorAll('.td-jawa-' + babId);
+  const btnBab = document.getElementById('btnTogglePegonBab-' + babId);
 
   const indoTampil = thIndo.style.display !== 'none';
   thIndo.style.display = indoTampil ? 'none' : '';
   thJawa.style.display = indoTampil ? '' : 'none';
   tdIndo.forEach(td => td.style.display = indoTampil ? 'none' : '');
   tdJawa.forEach(td => td.style.display = indoTampil ? '' : 'none');
+  if (btnBab) btnBab.textContent = indoTampil ? '⇄ Makna Indo' : '⇄ Pegon Jawa';
 }
 
     let resizeState = null;
