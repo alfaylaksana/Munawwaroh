@@ -1632,6 +1632,47 @@ body.mode-html-aktif .hasil-kotak {
       padding: 0;
     }
 
+.hasil-mengalir {
+  direction: rtl;
+  text-align: justify;
+  line-height: 2.6;
+  padding: 6px 4px;
+}
+
+.baca-kata {
+  font-family: 'Scheherazade New', 'Amiri', serif;
+  font-size: calc(26px * var(--fs));
+  color: #1a1208;
+  cursor: pointer;
+  padding: 2px 1px;
+  border-radius: 3px;
+  transition: background 0.15s;
+}
+
+.baca-kata:active, .baca-kata:hover {
+  background: #f5edd5;
+}
+
+.baca-fallback {
+  border-bottom: 1px dotted #c9a84c;
+}
+
+.baca-ayat-nomor {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid #c9a84c;
+  color: #7a5a20;
+  font-size: 13px;
+  font-family: Georgia, serif;
+  cursor: pointer;
+  vertical-align: middle;
+  margin: 0 4px;
+}
+
     .hasil-aliran {
       display: flex;
       flex-direction: row;
@@ -3305,6 +3346,48 @@ function togglePopupTerjemahan(el, nomorAyat) {
     
     const HARAKAT_SEMUA = /[\u064B-\u065F\u0610-\u061A\u0670]/g;
     const DIUCAPKAN = ['م', 'خ', 'مف', 'فا', 'ف', 'ما', 'مضا', 'فأ', 'حا', 'ظ', 'ص', 'ب', 'ج', '...', 'مط'];
+
+    // ── Mode Bacaan: bangun paragraf mengalir dari kataList satu Bab ──
+    // Berusaha pakai teks resmi Utsmani (petaUthmani) per ayat, TAPI
+    // hanya kalau jumlah katanya PERSIS sama dengan segmentasi Ustaz —
+    // kalau beda (kemungkinan ada kata yg digabung/dipisah beda),
+    // fallback ke teks input sendiri (arab-input) supaya tidak ada
+    // kata yang salah tempel atau hilang.
+    function bangunTeksMengalir(kataList, nomorSurah) {
+      if (!kataList.length) return '';
+      const grup = [];
+      let acc = [];
+      kataList.forEach(item => {
+        acc.push(item);
+        if (item.nomor) { grup.push(acc); acc = []; }
+      });
+      if (acc.length) grup.push(acc);
+
+      let html = '<div class="hasil-mengalir" dir="rtl">';
+      grup.forEach(g => {
+        const akhir = g[g.length - 1];
+        const ayahNum = akhir.nomor ? arabKeAngka(akhir.nomor) : null;
+        let kataLuar = null;
+        if (dataUthmaniSiap && nomorSurah && ayahNum !== null) {
+          const teksLuar = petaUthmani[nomorSurah + ':' + ayahNum];
+          if (teksLuar) {
+            const potongan = teksLuar.trim().split(/\s+/);
+            if (potongan.length === g.length) kataLuar = potongan;
+          }
+        }
+        g.forEach((item, i) => {
+          const teksTampil = kataLuar ? kataLuar[i] : prosesHarakat(item.arab);
+          const cls = kataLuar ? 'baca-kata' : 'baca-kata baca-fallback';
+          const titleAttr = kataLuar ? '' : ' title="Teks dari input sendiri (belum tersedia/tersinkron dari sumber Utsmani luar)"';
+          html += `<span class="${cls}" onclick="bukaKartuBaca(event,'${item.srcId}')"${titleAttr}>${teksTampil}</span> `;
+        });
+        if (ayahNum !== null) {
+          html += `<span class="baca-ayat-nomor" onclick="event.stopPropagation(); togglePopupTerjemahan(this, '${akhir.nomor}')">${akhir.nomor}</span> `;
+        }
+      });
+      html += '</div>';
+      return html;
+    }
 
     function parseKode(raw) {
       const tokens = raw.trim().split(/[\s,،]+/).filter(Boolean);
@@ -5564,6 +5647,12 @@ if(arab)kataList.push({kode,arab,maknaIndo,maknaJawa,nomor,krKanan,paksaBaris,be
   </div>`;
           }
           if(!kataList.length){html+=`</div></div>`; return; }
+          if (pegonTersembunyi && kodeTersembunyi) {
+            const nomorSurah = bab.querySelector('.bab-nomor-surah')?.value.trim() || '';
+            html += bangunTeksMengalir(kataList, nomorSurah);
+            html += `</div>`;
+            return;
+          }
           html += `<div class="hasil-aliran">`;
           kataList.forEach((item, index) => {
             const {
@@ -6232,6 +6321,26 @@ html += `</div>`;
         updateNavHasil([]);
         setTimeout(() => observeHalaman(), 500);
       }).catch(e => { alert('ERROR: ' + e.message); });
+      muatDataUthmani();
+    }
+
+    // ── Data Utsmani (Mode Bacaan) ──────────────────────────────────
+    // File statis lokal (dibundle bareng index.html, ikut ter-cache SW
+    // supaya tetap kebaca offline) berisi teks resmi Mushaf Utsmani
+    // Juz 30, dipakai HANYA utk tampilan mengalir di Mode Bacaan.
+    // Data kata hasil segmentasi Ustaz sendiri (arab-input dst) TIDAK
+    // diubah/ditimpa — tetap jadi sumber utama utk Mode Kajian & edit.
+    let petaUthmani = {};
+    let dataUthmaniSiap = false;
+    function muatDataUthmani() {
+      fetch('./juz30-uthmani.json')
+        .then(res => res.json())
+        .then(data => {
+          data.forEach(a => { petaUthmani[a.surah + ':' + a.ayah] = a.text; });
+          dataUthmaniSiap = true;
+          if (pegonTersembunyi && kodeTersembunyi) tampilkan();
+        })
+        .catch(err => console.warn('Gagal memuat juz30-uthmani.json (Mode Bacaan akan pakai teks input sendiri):', err));
     }
 
     // ── Auto-save untuk field kata (kode, arab, makna indo/jawa, geser) ──
