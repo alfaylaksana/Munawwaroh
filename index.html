@@ -1836,6 +1836,7 @@ body.mode-html-aktif .hasil-kotak {
       padding-bottom: 2px;
       overflow: visible;
       width: 100%;
+      margin-top: -10px;
     }
 
     .rujukan-row {
@@ -3010,6 +3011,7 @@ function bukaEditPegonInline(event, srcId) {
 
   const inputIndo = row.querySelector('.makna-indo') || row.querySelector('.s-indo');
   const inputJawa = row.querySelector('.makna-jawa') || row.querySelector('.s-jawa');
+  const inputKode = row.querySelector('.kode-input');
   if (!inputIndo || !inputJawa) return;
 
   const el = event.currentTarget;
@@ -3017,6 +3019,8 @@ function bukaEditPegonInline(event, srcId) {
   const popup = document.createElement('div');
   popup.className = 'popup-edit-pegon';
   popup.innerHTML = `
+    <label>Kode Gramatikal</label>
+    <input type="text" id="popupEditKode" value="${(inputKode?.value||'').replace(/"/g,'&quot;')}" placeholder="م · ١ · [١]" style="direction:rtl;text-align:right;" />
     <label>Makna Indo</label>
     <input type="text" id="popupEditIndo" value="${(inputIndo.value||'').replace(/"/g,'&quot;')}" placeholder="artinya..." />
     <label>Pegon Jawa</label>
@@ -3034,7 +3038,7 @@ function bukaEditPegonInline(event, srcId) {
   let top = rect.bottom + 8;
   if (left + popupW > window.innerWidth - 10) left = window.innerWidth - popupW - 10;
   if (left < 10) left = 10;
-  if (top + 140 > window.innerHeight) top = rect.top - 8 - 140;
+  if (top + 180 > window.innerHeight) top = rect.top - 8 - 180;
   popup.style.left = left + 'px';
   popup.style.top = top + 'px';
 
@@ -3058,10 +3062,13 @@ function simpanEditPegonInline(srcId) {
   if (!row) return;
   const inputIndo = row.querySelector('.makna-indo') || row.querySelector('.s-indo');
   const inputJawa = row.querySelector('.makna-jawa') || row.querySelector('.s-jawa');
+  const inputKode = row.querySelector('.kode-input');
   const nilaiIndo = document.getElementById('popupEditIndo')?.value || '';
   const nilaiJawa = document.getElementById('popupEditJawa')?.value || '';
+  const nilaiKode = document.getElementById('popupEditKode')?.value || '';
   if (inputIndo) inputIndo.value = nilaiIndo;
   if (inputJawa) inputJawa.value = nilaiJawa;
+  if (inputKode) inputKode.value = nilaiKode;
   tutupPopupEditPegon();
   const posisiScroll = window.scrollY;
   simpan();
