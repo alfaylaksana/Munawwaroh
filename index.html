@@ -1649,7 +1649,7 @@ body.mode-html-aktif .hasil-kotak {
     .kata-blok {
       display: flex;
       flex-direction: column;
-      align-items: flex-start;
+      align-items: center;
       min-width: 68px;
       overflow: visible;
       position: relative;
@@ -1666,7 +1666,7 @@ body.mode-html-aktif .hasil-kotak {
       font-style: italic;
       font-size: 10px;
       direction: ltr;
-      text-align: left;
+      text-align: center;
       transform: none;
       margin-top: 2px;
     }
@@ -1889,25 +1889,19 @@ body.mode-html-aktif .hasil-kotak {
 
     .pegon {
       font-size: calc(13px * var(--fs));
-      white-space: nowrap;
-      direction: rtl;
-      transform: rotate(-15deg);
-      transform-origin: top right;
-      margin-top: calc(-28px * var(--fs));
-      margin-right: 4px;
-      margin-left: -20px;
-      display: block;
       white-space: normal;
+      direction: rtl;
+      display: block;
       line-height: 1.2;
-      text-align: right;
+      text-align: center;
       max-width: 90px;
       opacity: 0.88;
       overflow: visible;
       position: relative;
       z-index: 1;
       transition: opacity 0.2s;
-      white-space: normal;
       word-break: break-word;
+      margin-top: 2px;
     }
 
     .pegon.indo {
