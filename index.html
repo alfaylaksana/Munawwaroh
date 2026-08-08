@@ -2949,7 +2949,7 @@ body.mode-html-aktif .hasil-kotak {
         <div class="dropdown-divider"></div>
         <button class="drop-item" onclick="bersihkanSemuaPegonJawa();tutupDropdown()">🧹 Bersihkan Semua Pegon Jawa</button>
         <button class="drop-item" onclick="konversiSemuaNomorKeArab();tutupDropdown()">١٢٣ Konversi Nomor Ayat ke Arab</button>
-        <button class="drop-item" onclick="isiOtomatisNomorSurah();tutupDropdown()">📖 Isi Otomatis No. Surah</button>
+        <button class="drop-item" onclick="deteksiNomorSurahSemuaBab();tutupDropdown()">📖 Deteksi No. Surah (cocokkan isi teks)</button>
         <button class="drop-item" onclick="cekPulihkanCadangan();tutupDropdown()">🔄 Cek Cadangan Lokal</button>
       </div>
     </div>
@@ -5177,17 +5177,71 @@ function terapkanLebarKolom(halEl) {
       return String(n).split('').map(d => ANGKA_ARAB[parseInt(d)]).join('');
     }
 
-    function isiOtomatisNomorSurah() {
+    function normalisasiUntukCocokkan(s) {
+      return (s || '')
+        .replace(/[\u064B-\u065F\u0610-\u061A\u0670\u06D6-\u06ED]/g, '') // harakat & tanda waqf
+        .replace(/[ٱإأآ]/g, 'ا')
+        .replace(/ة/g, 'ه')
+        .replace(/ى/g, 'ي')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function deteksiNomorSurahSemuaBab() {
+      if (!dataUthmaniSiap) { alert('Data Utsmani (juz30-uthmani.json) belum berhasil dimuat. Coba lagi sebentar, pastikan file itu sudah ikut diupload satu folder dengan index.html.'); return; }
+
+      // Kelompokkan petaUthmani jadi: per nomor ayat → daftar surah yang punya ayat itu
+      const byAyah = {};
+      Object.keys(petaUthmani).forEach(key => {
+        const [s, a] = key.split(':').map(Number);
+        if (!byAyah[a]) byAyah[a] = [];
+        byAyah[a].push({ surah: s, textNorm: normalisasiUntukCocokkan(petaUthmani[key]) });
+      });
+
       const semuaBab = document.querySelectorAll('.bab-input');
       if (!semuaBab.length) { alert('Belum ada Bab sama sekali.'); return; }
-      if (!confirm(`Isi otomatis "No. Surah" berurutan mulai dari 78 (An-Naba) untuk ${semuaBab.length} Bab, sesuai urutan tampil dari atas ke bawah? Bab Syi'ir dilewati (tidak ikut diberi nomor). Nilai yang sudah terisi akan DITIMPA. Setelah ini WAJIB dicek ulang manual di bab yang gabungan/tidak berurutan.`)) return;
-      let nomor = 78;
-      semuaBab.forEach(bab => {
-        const inp = bab.querySelector('.bab-nomor-surah');
-        if (inp) { inp.value = nomor; nomor++; }
+      if (!confirm(`Deteksi "No. Surah" ${semuaBab.length} Bab dengan mencocokkan isi teks kata pertama tiap Bab ke data Utsmani asli? Nilai yang sudah terisi akan DITIMPA kalau hasil deteksinya beda.`)) return;
+
+      let log = [];
+      semuaBab.forEach((bab, idx) => {
+        const tbody = bab.querySelector('tbody');
+        const inputSurah = bab.querySelector('.bab-nomor-surah');
+        if (!tbody || !inputSurah) return;
+        let acc = [], ayahNum = null;
+        for (const tr of tbody.querySelectorAll('tr')) {
+          const arab = tr.querySelector('.arab-input')?.value.trim() || '';
+          const nomor = tr.querySelector('.nom-input')?.value.trim() || '';
+          if (!arab) continue;
+          acc.push(arab);
+          if (nomor) { ayahNum = arabKeAngka(nomor); break; }
+        }
+        const label = `Bab ${idx + 1}`;
+        if (ayahNum === null || !byAyah[ayahNum]) {
+          log.push(`${label}: ⚠️ tidak terdeteksi (ayat pertama tidak ketemu nomornya)`);
+          return;
+        }
+        const internalNorm = normalisasiUntukCocokkan(acc.join(' '));
+        let cocok = byAyah[ayahNum].find(c => c.textNorm === internalNorm);
+        if (!cocok) {
+          let terbaik = null, skorTerbaik = 0;
+          byAyah[ayahNum].forEach(c => {
+            const min = Math.min(c.textNorm.length, internalNorm.length);
+            let skor = 0;
+            for (let i = 0; i < min; i++) { if (c.textNorm[i] === internalNorm[i]) skor++; else break; }
+            if (skor > skorTerbaik) { skorTerbaik = skor; terbaik = c; }
+          });
+          if (terbaik && internalNorm.length > 0 && skorTerbaik / internalNorm.length > 0.6) cocok = terbaik;
+        }
+        if (cocok) {
+          const lama = inputSurah.value.trim();
+          inputSurah.value = cocok.surah;
+          log.push(`${label}: Surah ${cocok.surah}${lama && lama != String(cocok.surah) ? ` (sebelumnya tertulis: ${lama})` : ''}`);
+        } else {
+          log.push(`${label}: ⚠️ TIDAK TERDETEKSI, cek manual (ayat ${ayahNum} tidak cocok dgn surah manapun)`);
+        }
       });
       simpan();
-      alert(`Selesai: ${semuaBab.length} bab diisi otomatis (Surah 78 s.d. ${nomor - 1}). Silakan cek ulang, terutama bab yang mungkin gabungan dua surah.`);
+      alert('Deteksi selesai:\n\n' + log.join('\n'));
     }
 
     function konversiSemuaNomorKeArab() {
