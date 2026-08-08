@@ -5517,6 +5517,18 @@ html += `</div>`;
     try {
       firebase.initializeApp(firebaseConfig);
       dbFirestore = firebase.firestore();
+      // Offline persistence: data dibaca/ditulis tetap jalan tanpa internet
+      // (disimpan lokal via IndexedDB oleh Firestore sendiri), lalu otomatis
+      // disinkronkan ke server begitu koneksi kembali ada.
+      dbFirestore.enablePersistence({ synchronizeTabs: true }).catch((err) => {
+        if (err.code === 'failed-precondition') {
+          console.warn('Offline persistence: hanya bisa aktif di satu tab pada satu waktu.');
+        } else if (err.code === 'unimplemented') {
+          console.warn('Offline persistence: browser ini tidak mendukung.');
+        } else {
+          console.warn('Offline persistence gagal diaktifkan:', err);
+        }
+      });
       REF_PROFIL = dbFirestore.collection('juz30').doc('profil');
       REF_HALAMAN = dbFirestore.collection('juz30_halaman');
     } catch (e) {
