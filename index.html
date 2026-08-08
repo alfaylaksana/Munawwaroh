@@ -2831,6 +2831,7 @@ body.mode-html-aktif .hasil-kotak {
         <label class="drop-item" style="cursor:pointer;">📥 Import JSON<input type="file" accept=".json" onchange="importJSON(event)" style="display:none;" /></label>
         <div class="dropdown-divider"></div>
         <button class="drop-item" onclick="bersihkanSemuaPegonJawa();tutupDropdown()">🧹 Bersihkan Semua Pegon Jawa</button>
+        <button class="drop-item" onclick="konversiSemuaNomorKeArab();tutupDropdown()">١٢٣ Konversi Nomor Ayat ke Arab</button>
         <button class="drop-item" onclick="cekPulihkanCadangan();tutupDropdown()">🔄 Cek Cadangan Lokal</button>
       </div>
     </div>
@@ -4935,6 +4936,22 @@ function terapkanLebarKolom(halEl) {
     }
     function angkaKeArab(n) {
       return String(n).split('').map(d => ANGKA_ARAB[parseInt(d)]).join('');
+    }
+
+    function konversiSemuaNomorKeArab() {
+      if (!confirm('Konversi SEMUA nomor ayat (Halaman Input yang sedang terbuka di layar ini) dari angka Latin ke angka Arab? Yang sudah Arab tidak akan berubah.')) return;
+      const semuaNomInput = document.querySelectorAll('.nom-input');
+      let diubah = 0;
+      semuaNomInput.forEach(inp => {
+        const angka = arabKeAngka(inp.value);
+        if (angka !== null && angka !== 0 && String(angka) !== '') {
+          if (!inp.value) return;
+          const baru = angkaKeArab(angka);
+          if (inp.value !== baru) { inp.value = baru; diubah++; }
+        }
+      });
+      simpan();
+      alert(`Selesai: ${diubah} nomor ayat dikonversi ke angka Arab.`);
     }
 
     function gabungNomorIni(btn) {
