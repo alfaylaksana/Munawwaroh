@@ -2908,6 +2908,7 @@ body.mode-html-aktif .hasil-kotak {
         <div class="dropdown-divider"></div>
         <button class="drop-item" onclick="bersihkanSemuaPegonJawa();tutupDropdown()">🧹 Bersihkan Semua Pegon Jawa</button>
         <button class="drop-item" onclick="konversiSemuaNomorKeArab();tutupDropdown()">١٢٣ Konversi Nomor Ayat ke Arab</button>
+        <button class="drop-item" onclick="isiOtomatisNomorSurah();tutupDropdown()">📖 Isi Otomatis No. Surah</button>
         <button class="drop-item" onclick="cekPulihkanCadangan();tutupDropdown()">🔄 Cek Cadangan Lokal</button>
       </div>
     </div>
@@ -4024,7 +4025,7 @@ function gotoHalamanHasil() {
   document.getElementById('containerHalaman').appendChild(div);
   if (babList.length) babList.forEach(b => {
     if (b.tipe === 'syiir') tambahBabSyiir(id, b);
-    else tambahBab(id, b.namaBab, b.kataList, b.babJudulIndo || '', b.babJudulJawa || '', b.babNomor || '');
+    else tambahBab(id, b.namaBab, b.kataList, b.babJudulIndo || '', b.babJudulJawa || '', b.babNomor || '', b.nomorSurah || '');
   });
   else tambahBab(id);
   // Isi terjemahan jika ada (dari import JSON)
@@ -4740,7 +4741,7 @@ function tambahHalamanDaftarKode(data = {}) {
       }
     }
 
-    function tambahBab(halamanId, namaBab = '', kataList = [], babJudulIndo = '', babJudulJawa = '', babNomor = '') {
+    function tambahBab(halamanId, namaBab = '', kataList = [], babJudulIndo = '', babJudulJawa = '', babNomor = '', nomorSurah = '') {
       const id = babCounter++;
       const container = document.getElementById('containerBab-' + halamanId);
       if (!container) return;
@@ -4761,6 +4762,10 @@ function tambahHalamanDaftarKode(data = {}) {
     <input class="bab-judul-indo" type="text" placeholder="Terjemah Indonesia..." value="${babJudulIndo||''}" />
     <input class="bab-judul-jawa" type="text" placeholder="Terjemah Jawa..." value="${babJudulJawa||''}" />
     <input class="bab-judul-nomor" type="text" placeholder="١" value="${babNomor||''}" style="direction:rtl;width:60px;" />
+  </div>
+  <div style="padding:4px 8px 0;">
+    <label style="font-size:10px;color:#a07840;">No. Surah Al-Qur'an (1-114) — utk ambil teks Utsmani asli di Mode Bacaan</label>
+    <input class="bab-nomor-surah" type="number" min="1" max="114" placeholder="mis. 78" value="${nomorSurah||''}" style="width:90px;display:block;font-size:12px;border:1px solid #d4b87a;border-radius:3px;padding:2px 5px;color:#7a5a20;" oninput="simpan()" />
   </div>
   <table>
     <thead><tr>
@@ -5087,6 +5092,19 @@ function terapkanLebarKolom(halEl) {
     }
     function angkaKeArab(n) {
       return String(n).split('').map(d => ANGKA_ARAB[parseInt(d)]).join('');
+    }
+
+    function isiOtomatisNomorSurah() {
+      const semuaBab = document.querySelectorAll('.bab-input');
+      if (!semuaBab.length) { alert('Belum ada Bab sama sekali.'); return; }
+      if (!confirm(`Isi otomatis "No. Surah" berurutan mulai dari 78 (An-Naba) untuk ${semuaBab.length} Bab, sesuai urutan tampil dari atas ke bawah? Bab Syi'ir dilewati (tidak ikut diberi nomor). Nilai yang sudah terisi akan DITIMPA. Setelah ini WAJIB dicek ulang manual di bab yang gabungan/tidak berurutan.`)) return;
+      let nomor = 78;
+      semuaBab.forEach(bab => {
+        const inp = bab.querySelector('.bab-nomor-surah');
+        if (inp) { inp.value = nomor; nomor++; }
+      });
+      simpan();
+      alert(`Selesai: ${semuaBab.length} bab diisi otomatis (Surah 78 s.d. ${nomor - 1}). Silakan cek ulang, terutama bab yang mungkin gabungan dua surah.`);
     }
 
     function konversiSemuaNomorKeArab() {
@@ -5952,6 +5970,7 @@ html += `</div>`;
             babJudulIndo: bab.querySelector('.bab-judul-indo')?.value || '',
             babJudulJawa: bab.querySelector('.bab-judul-jawa')?.value || '',
             babNomor: bab.querySelector('.bab-judul-nomor')?.value || '',
+            nomorSurah: bab.querySelector('.bab-nomor-surah')?.value || '',
             kataList
           });
         });
