@@ -2552,6 +2552,78 @@ body.mode-html-aktif .hasil-kotak {
   background: #f0e2b8;
 }
     
+.popup-edit-pegon {
+  position: fixed;
+  max-width: min(300px, 85vw);
+  background: #fffdf7 !important;
+  border: 1px solid #c9a84c;
+  border-radius: 6px;
+  padding: 10px 12px;
+  min-width: 220px;
+  box-shadow: 0 4px 16px rgba(100,70,20,0.25);
+  z-index: 9999;
+  font-family: Georgia, serif;
+  direction: ltr;
+  text-align: left;
+}
+
+.popup-edit-pegon label {
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #c9a84c;
+  display: block;
+  margin-bottom: 2px;
+  margin-top: 6px;
+}
+
+.popup-edit-pegon label:first-child { margin-top: 0; }
+
+.popup-edit-pegon input {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid #e0d0a0;
+  background: transparent;
+  padding: 4px 2px;
+  font-family: Georgia, serif;
+  font-size: 13px;
+  color: #1a1208;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.popup-edit-pegon input:focus { border-bottom-color: #c9a84c; }
+
+.popup-edit-pegon .popup-edit-aksi {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.popup-edit-pegon button {
+  flex: 1;
+  font-size: 10px;
+  border-radius: 4px;
+  padding: 5px 0;
+  cursor: pointer;
+  font-family: Georgia, serif;
+}
+
+.popup-edit-pegon .btn-simpan-pegon {
+  background: #c9a84c;
+  color: #fff;
+  border: 1px solid #7a5a20;
+  font-weight: bold;
+}
+
+.popup-edit-pegon .btn-batal-pegon {
+  background: #f5edd5;
+  color: #7a5a20;
+  border: 1px solid #c9a84c;
+}
+
+.pegon.indo, .pegon.jawa { cursor: pointer; }
+
 .popup-terjemahan {
   position: fixed;
   max-width: min(360px, 80vw);
@@ -2935,6 +3007,74 @@ body.mode-html-aktif .hasil-kotak {
     let lebarKolomDefault = {};
     let modeTampilTerakhir = 'pdf';
    
+function bukaEditPegonInline(event, srcId) {
+  event.stopPropagation();
+  document.querySelectorAll('.popup-edit-pegon').forEach(p => p.remove());
+
+  const row = document.getElementById(srcId);
+  if (!row) { alert('Baris input tidak ditemukan (mungkin sudah dihapus/diubah).'); return; }
+
+  const inputIndo = row.querySelector('.makna-indo') || row.querySelector('.s-indo');
+  const inputJawa = row.querySelector('.makna-jawa') || row.querySelector('.s-jawa');
+  if (!inputIndo || !inputJawa) return;
+
+  const el = event.currentTarget;
+
+  const popup = document.createElement('div');
+  popup.className = 'popup-edit-pegon';
+  popup.innerHTML = `
+    <label>Makna Indo</label>
+    <input type="text" id="popupEditIndo" value="${(inputIndo.value||'').replace(/"/g,'&quot;')}" placeholder="artinya..." />
+    <label>Pegon Jawa</label>
+    <input type="text" id="popupEditJawa" value="${(inputJawa.value||'').replace(/"/g,'&quot;')}" placeholder="tegese..." />
+    <div class="popup-edit-aksi">
+      <button type="button" class="btn-batal-pegon" onclick="tutupPopupEditPegon()">Batal</button>
+      <button type="button" class="btn-simpan-pegon" onclick="simpanEditPegonInline('${srcId}')">✓ Simpan</button>
+    </div>
+  `;
+  document.body.appendChild(popup);
+
+  const rect = el.getBoundingClientRect();
+  const popupW = Math.min(300, window.innerWidth * 0.85);
+  let left = rect.left + rect.width / 2 - popupW / 2;
+  let top = rect.bottom + 8;
+  if (left + popupW > window.innerWidth - 10) left = window.innerWidth - popupW - 10;
+  if (left < 10) left = 10;
+  if (top + 140 > window.innerHeight) top = rect.top - 8 - 140;
+  popup.style.left = left + 'px';
+  popup.style.top = top + 'px';
+
+  setTimeout(() => {
+    document.getElementById('popupEditIndo')?.focus();
+    document.addEventListener('click', function handler(e) {
+      if (!popup.contains(e.target) && e.target !== el) {
+        popup.remove();
+        document.removeEventListener('click', handler);
+      }
+    });
+  }, 100);
+}
+
+function tutupPopupEditPegon() {
+  document.querySelectorAll('.popup-edit-pegon').forEach(p => p.remove());
+}
+
+function simpanEditPegonInline(srcId) {
+  const row = document.getElementById(srcId);
+  if (!row) return;
+  const inputIndo = row.querySelector('.makna-indo') || row.querySelector('.s-indo');
+  const inputJawa = row.querySelector('.makna-jawa') || row.querySelector('.s-jawa');
+  const nilaiIndo = document.getElementById('popupEditIndo')?.value || '';
+  const nilaiJawa = document.getElementById('popupEditJawa')?.value || '';
+  if (inputIndo) inputIndo.value = nilaiIndo;
+  if (inputJawa) inputJawa.value = nilaiJawa;
+  tutupPopupEditPegon();
+  const posisiScroll = window.scrollY;
+  simpan();
+  tampilkan();
+  requestAnimationFrame(() => window.scrollTo({ top: posisiScroll }));
+}
+
 function togglePopupTerjemahan(el, nomorAyat) {
   document.querySelectorAll('.popup-terjemahan').forEach(p => p.remove());
 
@@ -5144,8 +5284,8 @@ document.querySelectorAll('.halaman-input').forEach((hal, hIdx) => {
                     <span class="arab" data-asli="${arab}">${arabTampil}</span>
                     <div class="bawah-kata">
                       ${rujukanRowHtml}
-                      <span class="pegon jawa${hiddenCls}" ${geserStyle} data-indo="${maknaIndo}" data-jawa="${maknaJawa}">${maknaJawa||maknaIndo}</span>
-                      <span class="pegon indo${hiddenCls}" ${geserStyle} data-indo="${maknaIndo}" data-jawa="${maknaJawa}">${maknaIndo||maknaJawa}</span>
+                      <span class="pegon jawa${hiddenCls}" ${geserStyle} data-indo="${maknaIndo}" data-jawa="${maknaJawa}" onclick="bukaEditPegonInline(event,'${item.id}')">${maknaJawa||maknaIndo}</span>
+                      <span class="pegon indo${hiddenCls}" ${geserStyle} data-indo="${maknaIndo}" data-jawa="${maknaJawa}" onclick="bukaEditPegonInline(event,'${item.id}')">${maknaIndo||maknaJawa}</span>
                     </div>
                   </div>`;
                 });
@@ -5223,9 +5363,9 @@ if(arab)kataList.push({kode,arab,maknaIndo,maknaJawa,nomor,krKanan,paksaBaris,be
             <div class="bawah-kata">
               ${rujukanRowHtml}
               ${item.belumAdaArti
-                ? `<span class="pegon indo belum-isi" ${geserStyle}>(belum ada arti)</span>`
-                : `<span class="pegon jawa${hiddenCls}" ${geserStyle} data-indo="${item.maknaIndo}" data-jawa="${item.maknaJawa}">${item.maknaJawa || item.maknaIndo}</span>
-              <span class="pegon indo${hiddenCls}" ${geserStyle} data-indo="${item.maknaIndo}" data-jawa="${item.maknaJawa}">${item.maknaIndo || item.maknaJawa}</span>`}
+                ? `<span class="pegon indo belum-isi" ${geserStyle} onclick="bukaEditPegonInline(event,'${item.srcId}')">(belum ada arti)</span>`
+                : `<span class="pegon jawa${hiddenCls}" ${geserStyle} data-indo="${item.maknaIndo}" data-jawa="${item.maknaJawa}" onclick="bukaEditPegonInline(event,'${item.srcId}')">${item.maknaJawa || item.maknaIndo}</span>
+              <span class="pegon indo${hiddenCls}" ${geserStyle} data-indo="${item.maknaIndo}" data-jawa="${item.maknaJawa}" onclick="bukaEditPegonInline(event,'${item.srcId}')">${item.maknaIndo || item.maknaJawa}</span>`}
             </div>
             ${nomorHtml}
           </div>${item.paksaBaris ? '<div class="pemisah-baris"></div>' : ''}`;
