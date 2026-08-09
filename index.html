@@ -2973,6 +2973,7 @@ body.mode-html-aktif .hasil-kotak {
         <button class="drop-item" onclick="konversiSemuaNomorKeArab();tutupDropdown()">١٢٣ Konversi Nomor Ayat ke Arab</button>
         <button class="drop-item" onclick="deteksiNomorSurahSemuaBab();tutupDropdown()">📖 Deteksi No. Surah (cocokkan isi teks)</button>
         <button class="drop-item" onclick="diagnosaBatasHalamanMushaf();tutupDropdown()">📄 Diagnosa Batas Halaman vs Mushaf Asli</button>
+        <button class="drop-item" onclick="cekGabungTampilanMushaf();tutupDropdown()">🔍 Cek Penggabungan Tampilan Mushaf</button>
         <button class="drop-item" onclick="gabungkanHalamanAppKeMushaf();tutupDropdown()" style="color:#a0402a;">📄 Gabung Halaman-app Sesuai Mushaf Asli</button>
         <button class="drop-item" onclick="cekPulihkanCadangan();tutupDropdown()">🔄 Cek Cadangan Lokal</button>
       </div>
@@ -5247,35 +5248,71 @@ function terapkanLebarKolom(halEl) {
       }
       return null;
     }
+    function cekGabungTampilanMushaf() {
+      if (!(pegonTersembunyi && kodeTersembunyi)) { alert('Aktifkan Mode Bacaan dulu, baru cek ini.'); return; }
+      if (!dataUthmaniSiap) { alert('Data Utsmani belum siap dimuat.'); return; }
+      let log = [];
+      let bucketSebelumnya = null;
+      let elIndukAktif = null;
+      document.querySelectorAll('.halaman-input').forEach((hal, idx) => {
+        try {
+          if (hal.classList.length > 1) { log.push(`#${idx+1}: (tipe non-konten, dilewati)`); bucketSebelumnya = null; elIndukAktif = null; return; }
+          const halId = hal.id.replace('halaman-', '');
+          const elHasil = document.getElementById('hasil-halaman-' + halId);
+          if (!elHasil) { log.push(`#${idx+1}: ⚠️ elemen hasil tidak ketemu (hasil-halaman-${halId})`); bucketSebelumnya = null; elIndukAktif = null; return; }
+          const posisi = awalSurahAyahHalaman(hal);
+          if (!posisi) { log.push(`#${idx+1}: ⚠️ posisi awal tidak terdeteksi`); bucketSebelumnya = null; elIndukAktif = null; return; }
+          const bucket = cariBucketMushaf(posisi.surah, posisi.ayah);
+          const gabung = (bucket !== -1 && bucket === bucketSebelumnya && elIndukAktif);
+          log.push(`#${idx+1}: mulai ${posisi.surah}:${posisi.ayah} → bucket ${bucket}${gabung ? ' (GABUNG ke induk)' : ' (jadi induk baru, Hlm.Mushaf ' + (bucket!==-1?AWAL_HALAMAN_MUSHAF[bucket].page:'?') + ')'}`);
+          if (!gabung) { elIndukAktif = elHasil; bucketSebelumnya = bucket; }
+        } catch (err) {
+          log.push(`#${idx+1}: ❌ ERROR: ${err.message}`);
+          bucketSebelumnya = null; elIndukAktif = null;
+        }
+      });
+      alert('Cek Penggabungan Tampilan Mushaf:\n\n' + log.join('\n'));
+    }
+
     function gabungkanHalamanMushafBacaan() {
       if (!(pegonTersembunyi && kodeTersembunyi)) return; // hanya Mode Bacaan
       if (!dataUthmaniSiap) return;
       let bucketSebelumnya = null;
       let elIndukAktif = null;
       document.querySelectorAll('.halaman-input').forEach(hal => {
-        if (hal.classList.length > 1) { bucketSebelumnya = null; elIndukAktif = null; return; } // tipe non-konten: reset grup
-        const halId = hal.id.replace('halaman-', '');
-        const elHasil = document.getElementById('hasil-halaman-' + halId);
-        if (!elHasil) { bucketSebelumnya = null; elIndukAktif = null; return; }
-        const posisi = awalSurahAyahHalaman(hal);
-        if (!posisi) { bucketSebelumnya = null; elIndukAktif = null; return; }
-        const bucket = cariBucketMushaf(posisi.surah, posisi.ayah);
+        try {
+          if (hal.classList.length > 1) { bucketSebelumnya = null; elIndukAktif = null; return; } // tipe non-konten: reset grup
+          const halId = hal.id.replace('halaman-', '');
+          const elHasil = document.getElementById('hasil-halaman-' + halId);
+          if (!elHasil) { bucketSebelumnya = null; elIndukAktif = null; return; }
+          const posisi = awalSurahAyahHalaman(hal);
+          if (!posisi) { bucketSebelumnya = null; elIndukAktif = null; return; }
+          const bucket = cariBucketMushaf(posisi.surah, posisi.ayah);
 
-        if (bucket !== -1 && bucket === bucketSebelumnya && elIndukAktif) {
-          // Halaman fisik mushaf yang sama dgn sebelumnya → gabung ke induk,
-          // buang badge nomor halaman-app-nya sendiri (biar cuma 1 per grup)
-          elHasil.querySelectorAll('.nomor-halaman-hasil').forEach(b => b.remove());
-          while (elHasil.firstChild) elIndukAktif.appendChild(elHasil.firstChild);
-          elHasil.remove();
-        } else {
-          elIndukAktif = elHasil;
-          bucketSebelumnya = bucket;
-          if (bucket !== -1) {
-            const nomorMushaf = AWAL_HALAMAN_MUSHAF[bucket].page;
-            elHasil.querySelectorAll('.nomor-halaman-hasil').forEach(b => {
-              b.textContent = 'Hlm. Mushaf ' + nomorMushaf;
-            });
+          if (bucket !== -1 && bucket === bucketSebelumnya && elIndukAktif) {
+            // Halaman fisik mushaf yang sama dgn sebelumnya → gabung ke induk,
+            // buang badge nomor halaman-app-nya sendiri (biar cuma 1 per grup)
+            elHasil.querySelectorAll('.nomor-halaman-hasil').forEach(b => b.remove());
+            while (elHasil.firstChild) elIndukAktif.appendChild(elHasil.firstChild);
+            elHasil.remove();
+            // Badge milik induk harus selalu di posisi PALING AKHIR (bukan
+            // ketinggalan di tengah, karena konten baru barusan ditambahkan setelahnya)
+            const badgeInduk = elIndukAktif.querySelector('.nomor-halaman-hasil');
+            if (badgeInduk) elIndukAktif.appendChild(badgeInduk);
+          } else {
+            elIndukAktif = elHasil;
+            bucketSebelumnya = bucket;
+            if (bucket !== -1) {
+              const nomorMushaf = AWAL_HALAMAN_MUSHAF[bucket].page;
+              elHasil.querySelectorAll('.nomor-halaman-hasil').forEach(b => {
+                b.textContent = 'Hlm. Mushaf ' + nomorMushaf;
+              });
+            }
           }
+        } catch (err) {
+          console.warn('gabungkanHalamanMushafBacaan: gagal proses satu Halaman-app, dilewati:', hal.id, err);
+          bucketSebelumnya = null;
+          elIndukAktif = null;
         }
       });
     }
