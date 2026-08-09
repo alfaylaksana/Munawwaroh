@@ -2973,6 +2973,7 @@ body.mode-html-aktif .hasil-kotak {
         <button class="drop-item" onclick="konversiSemuaNomorKeArab();tutupDropdown()">١٢٣ Konversi Nomor Ayat ke Arab</button>
         <button class="drop-item" onclick="deteksiNomorSurahSemuaBab();tutupDropdown()">📖 Deteksi No. Surah (cocokkan isi teks)</button>
         <button class="drop-item" onclick="diagnosaBatasHalamanMushaf();tutupDropdown()">📄 Diagnosa Batas Halaman vs Mushaf Asli</button>
+        <button class="drop-item" onclick="gabungkanHalamanAppKeMushaf();tutupDropdown()" style="color:#a0402a;">📄 Gabung Halaman-app Sesuai Mushaf Asli</button>
         <button class="drop-item" onclick="cekPulihkanCadangan();tutupDropdown()">🔄 Cek Cadangan Lokal</button>
       </div>
     </div>
@@ -5279,6 +5280,60 @@ function terapkanLebarKolom(halEl) {
       });
     }
 
+    function gabungkanHalamanAppKeMushaf() {
+      if (!dataUthmaniSiap) { alert('Data Utsmani belum siap dimuat, coba lagi sebentar.'); return; }
+
+      const semuaHalaman = [...document.querySelectorAll('.halaman-input')];
+      // Kelompokkan Halaman-app konten (bukan judul/pengantar/gambar/dst) per bucket mushaf
+      const grup = []; // tiap elemen: array of {hal, bab: <bab-input pertama>}
+      let bucketSebelumnya = null;
+      semuaHalaman.forEach(hal => {
+        if (hal.classList.length > 1) { bucketSebelumnya = null; return; } // reset di batas tipe non-konten
+        const babPertama = hal.querySelector('.bab-input');
+        if (!babPertama) { bucketSebelumnya = null; return; }
+        const posisi = awalSurahAyahHalaman(hal);
+        if (!posisi) { bucketSebelumnya = null; return; }
+        const bucket = cariBucketMushaf(posisi.surah, posisi.ayah);
+        if (bucket !== -1 && bucket === bucketSebelumnya && grup.length) {
+          grup[grup.length - 1].push({ hal, bab: babPertama });
+        } else {
+          grup.push([{ hal, bab: babPertama }]);
+          bucketSebelumnya = bucket;
+        }
+      });
+
+      const perluGabung = grup.filter(g => g.length > 1);
+      if (!perluGabung.length) { alert('Tidak ada Halaman-app yang perlu digabung — semua sudah 1 Halaman-app = 1 halaman fisik mushaf.'); return; }
+
+      const ringkasan = perluGabung.map(g => `${g.length} Halaman-app → jadi 1`).join('\n');
+      if (!confirm(`Akan menggabungkan Halaman-app yang masih 1 halaman fisik mushaf yang sama:\n\n${ringkasan}\n\nSemua kata dari Bab pertama & Bab lain di Halaman-app berikutnya (dlm 1 grup) akan disatukan ke Bab pertama grup itu; Halaman-app sisanya dihapus (kosong). Judul Bab tambahan (kalau ada isinya) akan HILANG — pastikan Bab lanjutan memang tidak ada judul sendiri. Lanjutkan?`)) return;
+
+      let jmlHalamanDihapus = 0;
+      perluGabung.forEach(g => {
+        const babTarget = g[0].bab;
+        const tbodyTarget = babTarget.querySelector('tbody');
+        for (let i = 1; i < g.length; i++) {
+          const halEl = g[i].hal;
+          halEl.querySelectorAll('.bab-input, .syiir-input').forEach(babLain => {
+            if (babLain === babTarget) return;
+            const tbodyLain = babLain.querySelector('tbody');
+            if (tbodyLain) {
+              [...tbodyLain.querySelectorAll('tr')].forEach(tr => tbodyTarget.appendChild(tr));
+              babLain.remove();
+            } else {
+              // syiir-input: pindahkan elemen bait-nya langsung ke akhir Bab target (jarang terjadi di tengah ayat)
+              babTarget.appendChild(babLain);
+            }
+          });
+          halEl.remove();
+          jmlHalamanDihapus++;
+        }
+      });
+
+      simpan();
+      alert(`Selesai: ${perluGabung.length} kelompok Halaman-app digabung, ${jmlHalamanDihapus} Halaman-app kosong dihapus. Silakan cek ulang urutan kata & Bab-nya di Input, lalu buka Mode Bacaan untuk pastikan tampilannya masih benar.`);
+    }
+
     function diagnosaBatasHalamanMushaf() {
       const semuaHalaman = document.querySelectorAll('.halaman-input');
       if (!semuaHalaman.length) { alert('Belum ada Halaman sama sekali.'); return; }
@@ -5914,6 +5969,7 @@ html += `</div>`;
         navList.push(pengantarNav);
       }
       hasilEl.innerHTML = html;
+      hasilEl.dataset.pernahRender = '1';
 
       // Syiir tetap di dalam hasil-halaman sesuai posisi DOM (tidak di-appendChild keluar)
       // Posisi render sudah benar karena mengikuti urutan bab dalam halaman
@@ -6540,7 +6596,8 @@ html += `</div>`;
 
     function init() {
       initModeAdmin();
-      muat().then(berhasil => {
+      Promise.allSettled([muat(), muatDataUthmani()]).then(([hasilMuat]) => {
+        const berhasil = hasilMuat.status === 'fulfilled' ? hasilMuat.value : false;
         if (!berhasil) {
           // Dulu di sini ada demo Bismillah bawaan Ar-Risalah — dihapus,
           // karena berisiko: kalau Firestore belum berhasil simpan,
@@ -6551,10 +6608,9 @@ html += `</div>`;
         }
         updateNavInput();
         updateNavHasil([]);
-        tampilkan(); // supaya pembaca biasa langsung lihat Hasil tanpa perlu klik apa pun
+        tampilkan(); // render PERTAMA baru dilakukan setelah data Firestore + Utsmani dua-duanya siap (atau gagal), supaya Mode Bacaan langsung benar sejak awal, tidak perlu render ulang belakangan
         setTimeout(() => observeHalaman(), 500);
       }).catch(e => { alert('ERROR: ' + e.message); });
-      muatDataUthmani();
     }
 
     // ── Data Utsmani (Mode Bacaan) ──────────────────────────────────
@@ -6593,14 +6649,22 @@ html += `</div>`;
       { page: 604, surah: 112, ayah: 1 },
     ];
     function muatDataUthmani() {
-      fetch('./juz30-uthmani.json')
+      const fetchData = fetch('./juz30-uthmani.json')
         .then(res => res.json())
         .then(data => {
+          const sudahSiapSebelumnya = dataUthmaniSiap;
           data.forEach(a => { petaUthmani[a.surah + ':' + a.ayah] = a.text; });
           dataUthmaniSiap = true;
-          if (pegonTersembunyi && kodeTersembunyi) tampilkan();
+          // Kalau ini baru selesai SETELAH batas waktu (render pertama sudah
+          // kadung jalan tanpa data ini), render ulang sekali supaya tetap
+          // ke-update begitu datanya akhirnya datang.
+          if (!sudahSiapSebelumnya && document.getElementById('hasil')?.dataset.pernahRender === '1') {
+            if (pegonTersembunyi && kodeTersembunyi) tampilkan();
+          }
         })
         .catch(err => console.warn('Gagal memuat juz30-uthmani.json (Mode Bacaan akan pakai teks input sendiri):', err));
+      const timeout = new Promise(resolve => setTimeout(resolve, 4000));
+      return Promise.race([fetchData, timeout]);
     }
 
     // ── Auto-save untuk field kata (kode, arab, makna indo/jawa, geser) ──
