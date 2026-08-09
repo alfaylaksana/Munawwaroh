@@ -17,6 +17,27 @@
       box-sizing: border-box;
     }
 
+    /* Mode baca sederhana (default): sembunyikan semua kontrol
+       editing/maintenance kecuali body diberi class .mode-admin
+       (diaktifkan lewat 5x ketuk cepat di footer "Coding by Claude"). */
+    body:not(.mode-admin) .maintenance-only,
+    body:not(.mode-admin) #wrapMaintenance {
+      display: none !important;
+    }
+
+    #footerKetuk {
+      display: block;
+      text-align: center;
+      font-size: 0.65rem;
+      color: #bba060;
+      cursor: default;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      touch-action: manipulation;
+      padding: 18px 0 70px;
+    }
+
     body {
   background: #ffffff;
   min-height: 100vh;
@@ -2885,6 +2906,7 @@ body.mode-html-aktif .hasil-kotak {
 
 <body>
 
+  <div id="wrapMaintenance" style="display:none;">
   <h1>Makna Gandul Pegon</h1>
   <p class="sub">Terjemah per kata · Kode gramatikal · Kode rujukan · Pegon Jawa &amp; Indonesia</p>
 
@@ -2973,12 +2995,15 @@ body.mode-html-aktif .hasil-kotak {
 <button class="btn-tampil" onclick="tampilkan('html')">Tampilkan HTML</button>
     <button class="btn-reset-tampil" onclick="resetTampilan()">Bersihkan Hasil</button>
   </div>
+  </div>
 
   <div class="hasil-wrapper">
     <div class="hasil-kotak" id="hasil">
       <div style="text-align:center;color:#bba060;font-style:italic;font-size:13px;padding:30px 0;">Hasil makna gandul akan tampil di sini</div>
     </div>
   </div>
+
+  <span id="footerKetuk" onclick="ketukAdmin(event)">Coding by Claude · Anthropic 🤖</span>
 
   <div class="modal-overlay" id="modalOverlay" onclick="tutupModal()"></div>
   <div class="modal-box" id="modalPindah">
@@ -3000,9 +3025,9 @@ body.mode-html-aktif .hasil-kotak {
   <div class="float-bar">
     <div class="float-left">
       <div class="float-kelola-halaman" id="floatKelolaHalaman">
-        <button class="btn-float bulat" id="btnNaikHalaman"  title="Naik"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 48 48"><path d="M24,10 L34,22 L28,22 L28,34 L20,34 L20,22 L14,22 Z" fill="white" stroke="#111" stroke-width="2.5" stroke-linejoin="round"/></svg></button>
-        <button class="btn-float bulat" id="btnTurunHalaman"  title="Turun"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 48 48"><path d="M24,38 L14,26 L20,26 L20,14 L28,14 L28,26 L34,26 Z" fill="white" stroke="#111" stroke-width="2.5" stroke-linejoin="round"/></svg></button>
-        <button class="btn-float bulat" id="btnPindahPosisi" title="Pindah ke posisi..." onclick="bukaModalPindahHalaman()" style="font-size:15px;">🔀</button>
+        <button class="btn-float bulat maintenance-only" id="btnNaikHalaman"  title="Naik"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 48 48"><path d="M24,10 L34,22 L28,22 L28,34 L20,34 L20,22 L14,22 Z" fill="white" stroke="#111" stroke-width="2.5" stroke-linejoin="round"/></svg></button>
+        <button class="btn-float bulat maintenance-only" id="btnTurunHalaman"  title="Turun"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 48 48"><path d="M24,38 L14,26 L20,26 L20,14 L28,14 L28,26 L34,26 Z" fill="white" stroke="#111" stroke-width="2.5" stroke-linejoin="round"/></svg></button>
+        <button class="btn-float bulat maintenance-only" id="btnPindahPosisi" title="Pindah ke posisi..." onclick="bukaModalPindahHalaman()" style="font-size:15px;">🔀</button>
         <div class="float-dropdown">
           <button class="btn-float bulat" onclick="toggleFloatDropdown('menuFloatTampilan')" title="Tampilan">👁</button>
           <div class="float-dropdown-menu" id="menuFloatTampilan" style="bottom:auto;top:-120px;left:55px;max-height:90vh;overflow-y:auto;">
@@ -3025,7 +3050,7 @@ body.mode-html-aktif .hasil-kotak {
             </div>
           </div>
         </div>
-        <div class="float-dropdown">
+        <div class="float-dropdown maintenance-only">
           <button class="btn-float bulat" onclick="toggleFloatDropdown('menuFloatData')" title="Data">💾</button>
           <div class="float-dropdown-menu" id="menuFloatData" style="bottom:auto;top:50px;">
             <button class="float-drop-item" onclick="simpan();tutupFloatDropdown()">💾 Simpan</button>
@@ -3041,7 +3066,7 @@ body.mode-html-aktif .hasil-kotak {
         <button class="btn-float bulat" onclick="tampilkan('html')" title="Tampilkan HTML" style="font-size:8px;font-weight:bold;letter-spacing:0.5px;">HTML</button>
         <button class="btn-float bulat" id="btnTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Ke atas"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 48 48"><path d="M24,10 L34,21 L28,21 L28,30 L20,30 L20,21 L14,21 Z M14,33 L34,33 L34,36 L14,36 Z" fill="white" stroke="#111" stroke-width="2.5" stroke-linejoin="round"/></svg></button>
       </div>
-      <div class="float-dropdown">
+      <div class="float-dropdown maintenance-only">
         <button class="btn-float" id="btnNavInput" onclick="toggleFloatDropdown('menuNavInput')">≡ Input</button>
         <div class="float-dropdown-menu" id="menuNavInput">
           <div class="float-drop-label">Navigasi Halaman Input</div>
@@ -3229,6 +3254,8 @@ function bukaEditPegonInline(event, srcId) {
   const popup = document.createElement('div');
   popup.className = 'popup-edit-pegon';
   popup.innerHTML = `
+    <label>Teks Arab (ayat) — hati-hati, jarang perlu diubah</label>
+    <input type="text" id="popupEditArab" value="${(inputArab?.value||'').replace(/"/g,'&quot;')}" placeholder="كَلِمَة" style="direction:rtl;text-align:right;font-size:18px;" />
     <label>Kode Gramatikal</label>
     <input type="text" id="popupEditKode" value="${(inputKode?.value||'').replace(/"/g,'&quot;')}" placeholder="م · ١ · [١]" style="direction:rtl;text-align:right;" />
     <label>Makna Indo</label>
@@ -3274,10 +3301,12 @@ function simpanEditPegonInline(srcId) {
   const inputJawa = row.querySelector('.makna-jawa') || row.querySelector('.s-jawa');
   const inputKode = row.querySelector('.kode-input');
   const inputArab = row.querySelector('.arab-input') || row.querySelector('.s-arab');
+  const nilaiArab = document.getElementById('popupEditArab')?.value || '';
   const nilaiIndo = document.getElementById('popupEditIndo')?.value || '';
   const nilaiJawa = document.getElementById('popupEditJawa')?.value || '';
   const nilaiKode = document.getElementById('popupEditKode')?.value || '';
   const nilaiPengaliStr = document.getElementById('popupEditPengali')?.value || '';
+  if (inputArab && nilaiArab.trim()) inputArab.value = nilaiArab;
   if (inputIndo) inputIndo.value = nilaiIndo;
   if (inputJawa) inputJawa.value = nilaiJawa;
   if (inputKode) inputKode.value = nilaiKode;
@@ -6411,7 +6440,43 @@ html += `</div>`;
       init();
     }
 
+    // ============================================================
+    // MODE ADMIN — sembunyikan kontrol edit/maintenance dari pembaca
+    // biasa (default: Hasil saja yang tampil, seperti mushaf), buka
+    // lewat 5x ketuk cepat di footer "Coding by Claude". Tersimpan
+    // per-device via localStorage (sekali aktif, tidak perlu ketuk
+    // ulang tiap buka app di device yang sama).
+    // ============================================================
+    let _tapAdminCount = 0;
+    let _tapAdminTimer = null;
+    function ketukAdmin(e) {
+      _tapAdminCount++;
+      clearTimeout(_tapAdminTimer);
+      _tapAdminTimer = setTimeout(() => { _tapAdminCount = 0; }, 2500);
+      const el = e && e.target;
+      if (el) {
+        el.style.color = '#2d6a4f';
+        setTimeout(() => { el.style.color = ''; }, 150);
+      }
+      if (_tapAdminCount >= 5) {
+        _tapAdminCount = 0;
+        const aktifSekarang = document.body.classList.contains('mode-admin');
+        setModeAdmin(!aktifSekarang);
+        alert(aktifSekarang
+          ? '🔒 Mode edit disembunyikan lagi di device ini.'
+          : '🔓 Mode edit diaktifkan di device ini (halaman Input & tombol maintenance kini tampil).');
+      }
+    }
+    function setModeAdmin(aktif) {
+      try { localStorage.setItem('munawwaroh_admin', aktif ? '1' : '0'); } catch (e) {}
+      document.body.classList.toggle('mode-admin', aktif);
+    }
+    function initModeAdmin() {
+      try { setModeAdmin(localStorage.getItem('munawwaroh_admin') === '1'); } catch (e) {}
+    }
+
     function init() {
+      initModeAdmin();
       muat().then(berhasil => {
         if (!berhasil) {
           // Dulu di sini ada demo Bismillah bawaan Ar-Risalah — dihapus,
@@ -6423,6 +6488,7 @@ html += `</div>`;
         }
         updateNavInput();
         updateNavHasil([]);
+        tampilkan(); // supaya pembaca biasa langsung lihat Hasil tanpa perlu klik apa pun
         setTimeout(() => observeHalaman(), 500);
       }).catch(e => { alert('ERROR: ' + e.message); });
       muatDataUthmani();
