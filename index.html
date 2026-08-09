@@ -5217,6 +5217,68 @@ function terapkanLebarKolom(halEl) {
         .trim();
     }
 
+    // ── Mode Bacaan: gabungkan tampilan beberapa Halaman-app yang
+    // berurutan jadi satu blok kalau memang masih 1 halaman fisik
+    // mushaf yang sama — MURNI tampilan, data Halaman-app di Input
+    // TIDAK disentuh/digabung sama sekali.
+    function bandingSurahAyah(s1, a1, s2, a2) {
+      return s1 !== s2 ? s1 - s2 : a1 - a2;
+    }
+    function cariBucketMushaf(surah, ayah) {
+      let idx = -1;
+      for (let i = 0; i < AWAL_HALAMAN_MUSHAF.length; i++) {
+        const b = AWAL_HALAMAN_MUSHAF[i];
+        if (bandingSurahAyah(surah, ayah, b.surah, b.ayah) >= 0) idx = i; else break;
+      }
+      return idx;
+    }
+    function awalSurahAyahHalaman(halEl) {
+      const babPertama = halEl.querySelector('.bab-input');
+      if (!babPertama) return null;
+      const tbody = babPertama.querySelector('tbody');
+      const nomorSurah = parseInt(babPertama.querySelector('.bab-nomor-surah')?.value.trim() || '');
+      if (!tbody || !nomorSurah) return null;
+      for (const tr of tbody.querySelectorAll('tr')) {
+        const arab = tr.querySelector('.arab-input')?.value.trim() || '';
+        const nomor = tr.querySelector('.nom-input')?.value.trim() || '';
+        if (!arab) continue;
+        if (nomor) return { surah: nomorSurah, ayah: arabKeAngka(nomor) };
+      }
+      return null;
+    }
+    function gabungkanHalamanMushafBacaan() {
+      if (!(pegonTersembunyi && kodeTersembunyi)) return; // hanya Mode Bacaan
+      if (!dataUthmaniSiap) return;
+      let bucketSebelumnya = null;
+      let elIndukAktif = null;
+      document.querySelectorAll('.halaman-input').forEach(hal => {
+        if (hal.classList.length > 1) { bucketSebelumnya = null; elIndukAktif = null; return; } // tipe non-konten: reset grup
+        const halId = hal.id.replace('halaman-', '');
+        const elHasil = document.getElementById('hasil-halaman-' + halId);
+        if (!elHasil) { bucketSebelumnya = null; elIndukAktif = null; return; }
+        const posisi = awalSurahAyahHalaman(hal);
+        if (!posisi) { bucketSebelumnya = null; elIndukAktif = null; return; }
+        const bucket = cariBucketMushaf(posisi.surah, posisi.ayah);
+
+        if (bucket !== -1 && bucket === bucketSebelumnya && elIndukAktif) {
+          // Halaman fisik mushaf yang sama dgn sebelumnya → gabung ke induk,
+          // buang badge nomor halaman-app-nya sendiri (biar cuma 1 per grup)
+          elHasil.querySelectorAll('.nomor-halaman-hasil').forEach(b => b.remove());
+          while (elHasil.firstChild) elIndukAktif.appendChild(elHasil.firstChild);
+          elHasil.remove();
+        } else {
+          elIndukAktif = elHasil;
+          bucketSebelumnya = bucket;
+          if (bucket !== -1) {
+            const nomorMushaf = AWAL_HALAMAN_MUSHAF[bucket].page;
+            elHasil.querySelectorAll('.nomor-halaman-hasil').forEach(b => {
+              b.textContent = 'Hlm. Mushaf ' + nomorMushaf;
+            });
+          }
+        }
+      });
+    }
+
     function diagnosaBatasHalamanMushaf() {
       const semuaHalaman = document.querySelectorAll('.halaman-input');
       if (!semuaHalaman.length) { alert('Belum ada Halaman sama sekali.'); return; }
@@ -5865,6 +5927,7 @@ html += `</div>`;
       document.querySelectorAll('.input-override-rapat').forEach(inp => {
         if (inp.value.trim()) terapkanRapatkanKata(inp);
       });
+      gabungkanHalamanMushafBacaan();
       setTimeout(() => sembunyikanBorderUjung(), 100);
       setTimeout(() => sesuaikanLebarPegon(), 800);
 
