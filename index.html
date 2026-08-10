@@ -3075,7 +3075,7 @@ body.mode-html-aktif .hasil-kotak {
     <div class="float-left">
       <div class="float-dropdown">
         <button class="btn-float bulat" onclick="toggleFloatDropdown('menuFloatTampilan')" title="Tampilan">👁</button>
-        <div class="float-dropdown-menu" id="menuFloatTampilan" style="bottom:auto;top:50px;max-height:90vh;overflow-y:auto;">
+        <div class="float-dropdown-menu" id="menuFloatTampilan" style="max-height:80vh;overflow-y:auto;">
           <div class="float-drop-label">Harakat</div>
           <button class="float-drop-item" onclick="setHarakat('lengkap');tutupFloatDropdown()">Lengkap</button>
           <button class="float-drop-item" onclick="setHarakat('irab');tutupFloatDropdown()">I'rab saja</button>
@@ -3096,7 +3096,7 @@ body.mode-html-aktif .hasil-kotak {
       </div>
       <div class="float-dropdown maintenance-only">
         <button class="btn-float bulat" onclick="toggleFloatDropdown('menuFloatData')" title="Data">💾</button>
-        <div class="float-dropdown-menu" id="menuFloatData" style="bottom:auto;top:50px;">
+        <div class="float-dropdown-menu" id="menuFloatData">
           <button class="float-drop-item" onclick="simpan();tutupFloatDropdown()">💾 Simpan</button>
           <button class="float-drop-item" onclick="exportJSON();tutupFloatDropdown()">📤 Export JSON</button>
           <label class="float-drop-item" style="cursor:pointer;">📥 Import JSON<input type="file" accept=".json" onchange="importJSON(event)" style="display:none;" /></label>
@@ -3119,7 +3119,7 @@ body.mode-html-aktif .hasil-kotak {
           <div id="listNavHasil"></div>
         </div>
       </div>
-      <button class="btn-float bulat" id="btnTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Ke atas"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 48 48"><path d="M24,10 L34,21 L28,21 L28,30 L20,30 L20,21 L14,21 Z M14,33 L34,33 L34,36 L14,36 Z" fill="white" stroke="#111" stroke-width="2.5" stroke-linejoin="round"/></svg></button>
+      <button class="btn-float bulat" id="btnTop" onclick="try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){window.scrollTo(0,0);}" title="Ke atas"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 48 48"><path d="M24,10 L34,21 L28,21 L28,30 L20,30 L20,21 L14,21 Z M14,33 L34,33 L34,36 L14,36 Z" fill="white" stroke="#111" stroke-width="2.5" stroke-linejoin="round"/></svg></button>
     </div>
   </div>
 
