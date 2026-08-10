@@ -1660,6 +1660,47 @@ body.mode-html-aktif .hasil-kotak {
       padding: 0;
     }
 
+.baca-kata-unit {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  vertical-align: middle;
+  margin: 0 2px;
+}
+
+.hasil-mengalir .kode-wrapper {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 1px;
+}
+
+.hasil-mengalir .kode-gramatikal {
+  font-size: 9px;
+  padding: 0 3px;
+  border-radius: 3px;
+  white-space: nowrap;
+  line-height: 1.5;
+}
+
+.hasil-mengalir .kode-gramatikal.diucapkan {
+  background: #eef0e0;
+  color: #4a5a30;
+}
+
+.hasil-mengalir .kode-gramatikal.tidakdiucapkan {
+  background: #f5edd5;
+  color: #a07840;
+}
+
+.hasil-mengalir .bawah-kata {
+  margin-top: -6px;
+}
+
+.hasil-mengalir .pegon {
+  font-size: 10px;
+  max-width: 80px;
+}
+
 .hasil-mengalir {
   direction: rtl;
   text-align: justify;
@@ -3032,64 +3073,53 @@ body.mode-html-aktif .hasil-kotak {
 
   <div class="float-bar">
     <div class="float-left">
-      <div class="float-kelola-halaman" id="floatKelolaHalaman">
-        <button class="btn-float bulat maintenance-only" id="btnNaikHalaman"  title="Naik"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 48 48"><path d="M24,10 L34,22 L28,22 L28,34 L20,34 L20,22 L14,22 Z" fill="white" stroke="#111" stroke-width="2.5" stroke-linejoin="round"/></svg></button>
-        <button class="btn-float bulat maintenance-only" id="btnTurunHalaman"  title="Turun"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 48 48"><path d="M24,38 L14,26 L20,26 L20,14 L28,14 L28,26 L34,26 Z" fill="white" stroke="#111" stroke-width="2.5" stroke-linejoin="round"/></svg></button>
-        <button class="btn-float bulat maintenance-only" id="btnPindahPosisi" title="Pindah ke posisi..." onclick="bukaModalPindahHalaman()" style="font-size:15px;">🔀</button>
-        <div class="float-dropdown">
-          <button class="btn-float bulat" onclick="toggleFloatDropdown('menuFloatTampilan')" title="Tampilan">👁</button>
-          <div class="float-dropdown-menu" id="menuFloatTampilan" style="bottom:auto;top:-120px;left:55px;max-height:90vh;overflow-y:auto;">
-            <div class="float-drop-label">Harakat</div>
-            <button class="float-drop-item" onclick="setHarakat('lengkap');tutupFloatDropdown()">Lengkap</button>
-            <button class="float-drop-item" onclick="setHarakat('irab');tutupFloatDropdown()">I'rab saja</button>
-            <button class="float-drop-item" onclick="setHarakat('tanpa');tutupFloatDropdown()">Tanpa harakat</button>
-            <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
-            <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
-            <button class="float-drop-item" id="btnModeBacaFloat" onclick="toggleModeBaca();tutupFloatDropdown()" style="font-weight:bold;color:#7a5a20;">📚 Ke Mode Kajian</button>
-            <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
-            <button class="float-drop-item" id="togPegonFloat" onclick="togglePegon();tutupFloatDropdown()">Tampilkan Pegon</button>
-            <button class="float-drop-item" id="togKodeFloat" onclick="toggleKode();tutupFloatDropdown()">Tampilkan Kode</button>
-            <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
-            <div class="float-drop-label">Ukuran Teks</div>
-            <div style="display:flex;gap:6px;padding:4px 8px;">
-              <button class="btn-skala" id="floatBtnK" onclick="setSkala(0.7,'K');tutupFloatDropdown()" title="Kecil">K</button>
-              <button class="btn-skala" id="floatBtnS" onclick="setSkala(0.85,'S');tutupFloatDropdown()" title="Sedang">S</button>
-              <button class="btn-skala aktif-skala" id="floatBtnB" onclick="setSkala(1,'B');tutupFloatDropdown()" title="Besar">B</button>
-            </div>
+      <div class="float-dropdown">
+        <button class="btn-float bulat" onclick="toggleFloatDropdown('menuFloatTampilan')" title="Tampilan">👁</button>
+        <div class="float-dropdown-menu" id="menuFloatTampilan" style="bottom:auto;top:50px;max-height:90vh;overflow-y:auto;">
+          <div class="float-drop-label">Harakat</div>
+          <button class="float-drop-item" onclick="setHarakat('lengkap');tutupFloatDropdown()">Lengkap</button>
+          <button class="float-drop-item" onclick="setHarakat('irab');tutupFloatDropdown()">I'rab saja</button>
+          <button class="float-drop-item" onclick="setHarakat('tanpa');tutupFloatDropdown()">Tanpa harakat</button>
+          <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
+          <button class="float-drop-item" id="btnModeBacaFloat" onclick="toggleModeBaca();tutupFloatDropdown()" style="font-weight:bold;color:#7a5a20;">📚 Ke Mode Kajian</button>
+          <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
+          <button class="float-drop-item" id="togPegonFloat" onclick="togglePegon();tutupFloatDropdown()">Tampilkan Pegon</button>
+          <button class="float-drop-item" id="togKodeFloat" onclick="toggleKode();tutupFloatDropdown()">Tampilkan Kode</button>
+          <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
+          <div class="float-drop-label">Ukuran Teks</div>
+          <div style="display:flex;gap:6px;padding:4px 8px;">
+            <button class="btn-skala" id="floatBtnK" onclick="setSkala(0.7,'K');tutupFloatDropdown()" title="Kecil">K</button>
+            <button class="btn-skala" id="floatBtnS" onclick="setSkala(0.85,'S');tutupFloatDropdown()" title="Sedang">S</button>
+            <button class="btn-skala aktif-skala" id="floatBtnB" onclick="setSkala(1,'B');tutupFloatDropdown()" title="Besar">B</button>
           </div>
         </div>
-        <div class="float-dropdown maintenance-only">
-          <button class="btn-float bulat" onclick="toggleFloatDropdown('menuFloatData')" title="Data">💾</button>
-          <div class="float-dropdown-menu" id="menuFloatData" style="bottom:auto;top:50px;">
-            <button class="float-drop-item" onclick="simpan();tutupFloatDropdown()">💾 Simpan</button>
-            <button class="float-drop-item" onclick="exportJSON();tutupFloatDropdown()">📤 Export JSON</button>
-            <label class="float-drop-item" style="cursor:pointer;">📥 Import JSON<input type="file" accept=".json" onchange="importJSON(event)" style="display:none;" /></label>
-            <button class="float-drop-item" onclick="bukaModalGabung();tutupFloatDropdown()">🔗 Gabung JSON</button>
-            <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
-            <button class="float-drop-item" onclick="bersihkanSemuaPegonJawa();tutupFloatDropdown()">🧹 Bersihkan Pegon Jawa</button>
-            <button class="float-drop-item" onclick="cekPulihkanCadangan();tutupFloatDropdown()">🔄 Cek Cadangan Lokal</button>
-          </div>
-        </div>
-        <button class="btn-float bulat" onclick="tampilkan('html')" title="Tampilkan HTML">HTML</button>
-        <button class="btn-float bulat" id="btnTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Ke atas"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 48 48"><path d="M24,10 L34,21 L28,21 L28,30 L20,30 L20,21 L14,21 Z M14,33 L34,33 L34,36 L14,36 Z" fill="white" stroke="#111" stroke-width="2.5" stroke-linejoin="round"/></svg></button>
       </div>
       <div class="float-dropdown maintenance-only">
-        <button class="btn-float" id="btnNavInput" onclick="toggleFloatDropdown('menuNavInput')">≡ Input</button>
-        <div class="float-dropdown-menu" id="menuNavInput">
-          <div class="float-drop-label">Navigasi Halaman Input</div>
-          <div id="listNavInput"></div>
+        <button class="btn-float bulat" onclick="toggleFloatDropdown('menuFloatData')" title="Data">💾</button>
+        <div class="float-dropdown-menu" id="menuFloatData" style="bottom:auto;top:50px;">
+          <button class="float-drop-item" onclick="simpan();tutupFloatDropdown()">💾 Simpan</button>
+          <button class="float-drop-item" onclick="exportJSON();tutupFloatDropdown()">📤 Export JSON</button>
+          <label class="float-drop-item" style="cursor:pointer;">📥 Import JSON<input type="file" accept=".json" onchange="importJSON(event)" style="display:none;" /></label>
+          <button class="float-drop-item" onclick="bukaModalGabung();tutupFloatDropdown()">🔗 Gabung JSON</button>
+          <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
+          <button class="float-drop-item" onclick="bersihkanSemuaPegonJawa();tutupFloatDropdown()">🧹 Bersihkan Pegon Jawa</button>
+          <button class="float-drop-item" onclick="cekPulihkanCadangan();tutupFloatDropdown()">🔄 Cek Cadangan Lokal</button>
+          <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
+          <button class="float-drop-item" onclick="konversiSemuaNomorKeArab();tutupFloatDropdown()">١٢٣ Konversi Nomor Ayat ke Arab</button>
+          <button class="float-drop-item" onclick="deteksiNomorSurahSemuaBab();tutupFloatDropdown()">📖 Deteksi No. Surah (cocokkan isi teks)</button>
+          <button class="float-drop-item" onclick="diagnosaBatasHalamanMushaf();tutupFloatDropdown()">📄 Diagnosa Batas Halaman vs Mushaf Asli</button>
+          <button class="float-drop-item" onclick="cekGabungTampilanMushaf();tutupFloatDropdown()">🔍 Cek Penggabungan Tampilan Mushaf</button>
+          <button class="float-drop-item" onclick="gabungkanHalamanAppKeMushaf();tutupFloatDropdown()" style="color:#a0402a;">📄 Gabung Halaman-app Sesuai Mushaf Asli</button>
         </div>
       </div>
-    </div>
-    <div class="float-right">
       <div class="float-dropdown">
-        <button class="btn-float" id="btnNavHasil" onclick="toggleFloatDropdown('menuNavHasil')">≡ Hasil</button>
-        <div class="float-dropdown-menu kanan" id="menuNavHasil">
-          <div class="float-drop-label">Navigasi Halaman Hasil</div>
+        <button class="btn-float" id="btnNavHasil" onclick="toggleFloatDropdown('menuNavHasil')">📖 Halaman</button>
+        <div class="float-dropdown-menu" id="menuNavHasil">
+          <div class="float-drop-label">Loncat ke Halaman</div>
           <div id="listNavHasil"></div>
         </div>
       </div>
-      <button class="btn-float" id="btnTampilFloat" onclick="tampilkan()">Tampilkan ▶</button>
+      <button class="btn-float bulat" id="btnTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Ke atas"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 48 48"><path d="M24,10 L34,21 L28,21 L28,30 L20,30 L20,21 L14,21 Z M14,33 L34,33 L34,36 L14,36 Z" fill="white" stroke="#111" stroke-width="2.5" stroke-linejoin="round"/></svg></button>
     </div>
   </div>
 
@@ -3151,6 +3181,7 @@ body.mode-html-aktif .hasil-kotak {
       modeBahasa = 'indo';
     let pegonTersembunyi = true,
       kodeTersembunyi = true;
+    let modeBacaanAktif = true; // layout mengalir ala mushaf; terpisah dari toggle Pegon/Kode di atas, supaya keduanya bisa dicoba tampil bareng
     let hideTimer = null,
       pindahBabId = null,
       halamanAktifId = null;;
@@ -3215,7 +3246,6 @@ function bukaKartuBaca(event, srcId) {
     ${(!kode && !maknaIndo && !maknaJawa) ? `<div class="kartu-baca-kosong">Belum ada catatan untuk kata ini.</div>` : ''}
     <div class="kartu-baca-aksi">
       <button type="button" class="btn-tutup-kartu" onclick="document.querySelectorAll('.kartu-baca').forEach(k=>k.remove())">Tutup</button>
-      <button type="button" class="btn-edit-kartu" onclick="document.querySelectorAll('.kartu-baca').forEach(k=>k.remove()); bukaEditPegonInline(event,'${srcId}')">✏️ Edit</button>
     </div>
   `;
   document.body.appendChild(kartu);
@@ -3400,6 +3430,11 @@ function togglePopupTerjemahan(el, nomorAyat) {
       });
       if (acc.length) grup.push(acc);
 
+      const isAdmin = document.body.classList.contains('mode-admin');
+      const klikKata = (srcId) => isAdmin
+        ? `bukaEditPegonInline(event,'${srcId}')`
+        : `bukaKartuBaca(event,'${srcId}')`;
+
       let html = '<div class="hasil-mengalir" dir="rtl">';
       grup.forEach(g => {
         const akhir = g[g.length - 1];
@@ -3416,7 +3451,26 @@ function togglePopupTerjemahan(el, nomorAyat) {
           const teksTampil = kataLuar ? kataLuar[i] : prosesHarakat(item.arab);
           const cls = kataLuar ? 'baca-kata' : 'baca-kata baca-fallback';
           const titleAttr = kataLuar ? '' : ' title="Teks dari input sendiri (belum tersedia/tersinkron dari sumber Utsmani luar)"';
-          html += `<span class="${cls}" onclick="bukaKartuBaca(event,'${item.srcId}')"${titleAttr}>${teksTampil}</span> `;
+
+          // Kode gramatikal (pakai class yg sama dgn grid, jadi ikut toggleKode())
+          const { gramatikal } = parseKode(item.kode || '');
+          const kodeHtml = gramatikal.length === 0 ? '' :
+            `<div class="kode-wrapper">${gramatikal.map(k => {
+              if (!k) return '';
+              if (k === '...') return `<div class="kode-gramatikal murojaah">...</div>`;
+              const kcls = DIUCAPKAN.includes(k) ? 'diucapkan' : 'tidakdiucapkan';
+              return `<div class="kode-gramatikal ${kcls}">${k}</div>`;
+            }).join('')}</div>`;
+
+          // Pegon indo/jawa (pakai class yg sama dgn grid, jadi ikut togglePegon())
+          const maknaIndo = item.maknaIndo || '';
+          const maknaJawa = item.maknaJawa || '';
+          const pegonHtml = (maknaIndo || maknaJawa) ? `<div class="bawah-kata">
+              <span class="pegon jawa" data-indo="${maknaIndo}" data-jawa="${maknaJawa}">${maknaJawa || maknaIndo}</span>
+              <span class="pegon indo" data-indo="${maknaIndo}" data-jawa="${maknaJawa}">${maknaIndo || maknaJawa}</span>
+            </div>` : '';
+
+          html += `<span class="baca-kata-unit">${kodeHtml}<span class="${cls}" onclick="${klikKata(item.srcId)}"${titleAttr}>${teksTampil}</span>${pegonHtml}</span> `;
         });
         if (ayahNum !== null) {
           html += `<span class="baca-ayat-nomor" onclick="event.stopPropagation(); togglePopupTerjemahan(this, '${akhir.nomor}')">${akhir.nomor}</span> `;
@@ -3856,14 +3910,6 @@ notif.textContent = '✓ PDF tersimpan!';
         simpan();
       }
     }
-    document.getElementById('btnNaikHalaman').onclick = () => {
-      bukaModalPindahHalaman();
-      tampilkanFloat();
-    };
-    document.getElementById('btnTurunHalaman').onclick = () => {
-      bukaModalPindahHalaman();
-      tampilkanFloat();
-    };
     window.addEventListener('scroll', tampilkanFloat);
     document.addEventListener('touchstart', tampilkanFloat);
     document.addEventListener('mousemove', tampilkanFloat);
@@ -3888,6 +3934,7 @@ notif.textContent = '✓ PDF tersimpan!';
 
     function updateNavInput() {
   const list = document.getElementById('listNavInput');
+  if (!list) return; // dropdown ≡ Input sudah dihapus dari UI, nav-nya tidak dipakai lagi
   const hals = document.querySelectorAll('.halaman-input');
   const total = hals.length;
   if (!total) {
@@ -4058,21 +4105,13 @@ function gotoHalamanHasil() {
     }
 
     function toggleModeBaca() {
-      const modeBacaAktif = pegonTersembunyi && kodeTersembunyi;
-      if (modeBacaAktif) {
-        // sedang Mode Bacaan → pindah ke Mode Kajian (tampilkan semua)
-        if (pegonTersembunyi) togglePegon();
-        if (kodeTersembunyi) toggleKode();
-      } else {
-        // pindah ke Mode Bacaan (sembunyikan semua)
-        if (!pegonTersembunyi) togglePegon();
-        if (!kodeTersembunyi) toggleKode();
-      }
+      modeBacaanAktif = !modeBacaanAktif;
+      updateLabelModeBaca();
+      tampilkan();
     }
 
     function updateLabelModeBaca() {
-      const modeBacaAktif = pegonTersembunyi && kodeTersembunyi;
-      const teks = modeBacaAktif ? '📚 Ke Mode Kajian' : '📖 Ke Mode Bacaan';
+      const teks = modeBacaanAktif ? '📚 Ke Mode Kajian' : '📖 Ke Mode Bacaan';
       const btn = document.getElementById('btnModeBaca');
       const btnF = document.getElementById('btnModeBacaFloat');
       if (btn) btn.textContent = teks;
@@ -4720,7 +4759,7 @@ function tambahHalamanDaftarKode(data = {}) {
         btn.textContent = '↩ Kembali ke Hasil';
         btn.style.cssText = 'background:#c9a84c;color:#fff;border:1px solid #7a5a20;border-radius:12px;padding:0 5px;height:24px;font-size:8px;font-weight:bold;box-shadow:0 2px 8px rgba(0,0,0,0.25);cursor:pointer;pointer-events:auto;white-space:nowrap;';
         btn.onclick = kembaliKeHasil;
-        document.querySelector('.float-right').appendChild(btn);
+        document.querySelector('.float-left').appendChild(btn);
       }
       btn.style.display = 'block';
     }
@@ -5254,7 +5293,7 @@ function terapkanLebarKolom(halEl) {
       return null;
     }
     function cekGabungTampilanMushaf() {
-      if (!(pegonTersembunyi && kodeTersembunyi)) { alert('Aktifkan Mode Bacaan dulu, baru cek ini.'); return; }
+      if (!modeBacaanAktif) { alert('Aktifkan Mode Bacaan dulu, baru cek ini.'); return; }
       if (!dataUthmaniSiap) { alert('Data Utsmani belum siap dimuat.'); return; }
       let log = [];
       let bucketSebelumnya = null;
@@ -5280,7 +5319,7 @@ function terapkanLebarKolom(halEl) {
     }
 
     function gabungkanHalamanMushafBacaan() {
-      if (!(pegonTersembunyi && kodeTersembunyi)) return; // hanya Mode Bacaan
+      if (!modeBacaanAktif) return; // hanya Mode Bacaan
       if (!dataUthmaniSiap) return;
       let bucketSebelumnya = null;
       let elIndukAktif = null;
@@ -5891,7 +5930,7 @@ document.querySelectorAll('.halaman-input').forEach((hal, hIdx) => {
                   } else {
                     rujukanRowHtml = `<div class="rujukan-kosong"></div>`;
                   }
-                  html += `<div class="syiir-kata-blok" onclick="if (pegonTersembunyi && kodeTersembunyi) { bukaKartuBaca(event,'${item.id}'); } else if (!event.target.closest('.pegon')) { lompatKeInput('${item.id}'); }" style="cursor:pointer;">
+                  html += `<div class="syiir-kata-blok" onclick="if (!modeBacaanAktif) { if(!event.target.closest('.pegon')) lompatKeInput('${item.id}'); } else if (document.body.classList.contains('mode-admin')) { bukaEditPegonInline(event,'${item.id}'); } else { bukaKartuBaca(event,'${item.id}'); }" style="cursor:pointer;">
                     ${kodeHtml}
                     <span class="arab" data-asli="${arab}">${arabTampil}</span>
                     <div class="bawah-kata">
@@ -5939,7 +5978,7 @@ if(arab)kataList.push({kode,arab,maknaIndo,maknaJawa,nomor,krKanan,paksaBaris,be
   </div>`;
           }
           if(!kataList.length){html+=`</div></div>`; return; }
-          if (pegonTersembunyi && kodeTersembunyi) {
+          if (modeBacaanAktif) {
             const nomorSurah = bab.querySelector('.bab-nomor-surah')?.value.trim() || '';
             html += bangunTeksMengalir(kataList, nomorSurah);
             html += `</div>`;
@@ -5975,7 +6014,7 @@ if(arab)kataList.push({kode,arab,maknaIndo,maknaJawa,nomor,krKanan,paksaBaris,be
             const nomorHtml = item.nomor ? `<div class="nomor-ayat" onclick="event.stopPropagation(); togglePopupTerjemahan(this, '${item.nomor}')">${item.nomor}</div>` : '';
             const geser = item.geserPegon ? parseInt(item.geserPegon) : 0;
             const geserStyle = geser ? `style="margin-right:${geser}px;"` : '';
-            html += `<div class="kata-blok ${zebra}${item.nomor?' ada-nomor ujung-ayat':''}${item.belumAdaArti?' belum-ada-arti':''}" onclick="if (pegonTersembunyi && kodeTersembunyi) { bukaKartuBaca(event,'${item.srcId}'); } else if (!event.target.closest('.pegon')) { lompatKeInput('${item.srcId}'); }" style="cursor:pointer;" title="${item.belumAdaArti?'Belum ada terjemahan':''}">
+            html += `<div class="kata-blok ${zebra}${item.nomor?' ada-nomor ujung-ayat':''}${item.belumAdaArti?' belum-ada-arti':''}" onclick="if (!modeBacaanAktif) { if(!event.target.closest('.pegon')) lompatKeInput('${item.srcId}'); } else if (document.body.classList.contains('mode-admin')) { bukaEditPegonInline(event,'${item.srcId}'); } else { bukaKartuBaca(event,'${item.srcId}'); }" style="cursor:pointer;" title="${item.belumAdaArti?'Belum ada terjemahan':''}">
             ${kodeHtml}
             <span class="arab" data-asli="${item.arab}">${arabTampil}</span>
             <div class="bawah-kata">
@@ -6701,7 +6740,7 @@ html += `</div>`;
           // kadung jalan tanpa data ini), render ulang sekali supaya tetap
           // ke-update begitu datanya akhirnya datang.
           if (!sudahSiapSebelumnya && document.getElementById('hasil')?.dataset.pernahRender === '1') {
-            if (pegonTersembunyi && kodeTersembunyi) tampilkan();
+            if (modeBacaanAktif) tampilkan();
           }
         })
         .catch(err => console.warn('Gagal memuat juz30-uthmani.json (Mode Bacaan akan pakai teks input sendiri):', err));
