@@ -3187,7 +3187,7 @@ body.mode-html-aktif .hasil-kotak {
       halamanAktifId = null;;
     let terjemahanData = {};
     let lebarKolomDefault = {};
-    let modeTampilTerakhir = 'pdf';
+    let modeTampilTerakhir = 'html';
    
 function parseOverridePengali(nilaiField) {
   const map = {};
@@ -3453,22 +3453,31 @@ function togglePopupTerjemahan(el, nomorAyat) {
           const titleAttr = kataLuar ? '' : ' title="Teks dari input sendiri (belum tersedia/tersinkron dari sumber Utsmani luar)"';
 
           // Kode gramatikal (pakai class yg sama dgn grid, jadi ikut toggleKode())
-          const { gramatikal } = parseKode(item.kode || '');
-          const kodeHtml = gramatikal.length === 0 ? '' :
-            `<div class="kode-wrapper">${gramatikal.map(k => {
-              if (!k) return '';
-              if (k === '...') return `<div class="kode-gramatikal murojaah">...</div>`;
-              const kcls = DIUCAPKAN.includes(k) ? 'diucapkan' : 'tidakdiucapkan';
-              return `<div class="kode-gramatikal ${kcls}">${k}</div>`;
-            }).join('')}</div>`;
+          // — di-skip generate sama sekali kalau sedang tersembunyi, biar tdk
+          // ikut mengganggu line-height/perataan teks yg mengalir.
+          let kodeHtml = '';
+          if (!kodeTersembunyi) {
+            const { gramatikal } = parseKode(item.kode || '');
+            kodeHtml = gramatikal.length === 0 ? '' :
+              `<div class="kode-wrapper">${gramatikal.map(k => {
+                if (!k) return '';
+                if (k === '...') return `<div class="kode-gramatikal murojaah">...</div>`;
+                const kcls = DIUCAPKAN.includes(k) ? 'diucapkan' : 'tidakdiucapkan';
+                return `<div class="kode-gramatikal ${kcls}">${k}</div>`;
+              }).join('')}</div>`;
+          }
 
           // Pegon indo/jawa (pakai class yg sama dgn grid, jadi ikut togglePegon())
-          const maknaIndo = item.maknaIndo || '';
-          const maknaJawa = item.maknaJawa || '';
-          const pegonHtml = (maknaIndo || maknaJawa) ? `<div class="bawah-kata">
-              <span class="pegon jawa" data-indo="${maknaIndo}" data-jawa="${maknaJawa}">${maknaJawa || maknaIndo}</span>
-              <span class="pegon indo" data-indo="${maknaIndo}" data-jawa="${maknaJawa}">${maknaIndo || maknaJawa}</span>
-            </div>` : '';
+          // — sama, di-skip generate kalau sedang tersembunyi.
+          let pegonHtml = '';
+          if (!pegonTersembunyi) {
+            const maknaIndo = item.maknaIndo || '';
+            const maknaJawa = item.maknaJawa || '';
+            pegonHtml = (maknaIndo || maknaJawa) ? `<div class="bawah-kata">
+                <span class="pegon jawa" data-indo="${maknaIndo}" data-jawa="${maknaJawa}">${maknaJawa || maknaIndo}</span>
+                <span class="pegon indo" data-indo="${maknaIndo}" data-jawa="${maknaJawa}">${maknaIndo || maknaJawa}</span>
+              </div>` : '';
+          }
 
           html += `<span class="baca-kata-unit">${kodeHtml}<span class="${cls}" onclick="${klikKata(item.srcId)}"${titleAttr}>${teksTampil}</span>${pegonHtml}</span> `;
         });
