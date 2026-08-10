@@ -5301,6 +5301,23 @@ function terapkanLebarKolom(halEl) {
       }
       return null;
     }
+    // Khusus utk laporan diagnosa — jelaskan KENAPA awalSurahAyahHalaman gagal,
+    // tanpa mengubah perilaku fungsi utama di atas.
+    function alasanGagalDeteksi(halEl) {
+      const babPertama = halEl.querySelector('.bab-input');
+      if (!babPertama) return 'tidak ada Bab (bab-input) di Halaman-app ini';
+      const tbody = babPertama.querySelector('tbody');
+      if (!tbody) return 'Bab pertama tidak punya tbody (struktur rusak?)';
+      const nomorSurahRaw = babPertama.querySelector('.bab-nomor-surah')?.value.trim() || '';
+      const nomorSurah = parseInt(nomorSurahRaw);
+      if (!nomorSurah) return `field "No. Surah" kosong/tidak valid (isinya: "${nomorSurahRaw}")`;
+      const rows = [...tbody.querySelectorAll('tr')];
+      const rowsBerisi = rows.filter(tr => (tr.querySelector('.arab-input')?.value.trim() || ''));
+      if (!rowsBerisi.length) return `Bab ini tidak punya kata berisi arab sama sekali (${rows.length} baris, semua kosong)`;
+      const adaNomor = rowsBerisi.some(tr => (tr.querySelector('.nom-input')?.value.trim() || ''));
+      if (!adaNomor) return `ada ${rowsBerisi.length} kata berisi, tapi TIDAK ADA satu pun yg diberi nomor ayat (field No. Ayat kosong semua)`;
+      return 'tidak diketahui (cek manual)';
+    }
     function cekGabungTampilanMushaf() {
       if (!modeBacaanAktif) { alert('Aktifkan Mode Bacaan dulu, baru cek ini.'); return; }
       if (!dataUthmaniSiap) { alert('Data Utsmani belum siap dimuat.'); return; }
@@ -5314,7 +5331,7 @@ function terapkanLebarKolom(halEl) {
           const elHasil = document.getElementById('hasil-halaman-' + halId);
           if (!elHasil) { log.push(`#${idx+1}: ⚠️ elemen hasil tidak ketemu (hasil-halaman-${halId})`); bucketSebelumnya = null; elIndukAktif = null; return; }
           const posisi = awalSurahAyahHalaman(hal);
-          if (!posisi) { log.push(`#${idx+1}: ⚠️ posisi awal tidak terdeteksi`); bucketSebelumnya = null; elIndukAktif = null; return; }
+          if (!posisi) { log.push(`#${idx+1}: ⚠️ posisi awal tidak terdeteksi — ${alasanGagalDeteksi(hal)}`); bucketSebelumnya = null; elIndukAktif = null; return; }
           const bucket = cariBucketMushaf(posisi.surah, posisi.ayah);
           const gabung = (bucket !== -1 && bucket === bucketSebelumnya && elIndukAktif);
           log.push(`#${idx+1}: mulai ${posisi.surah}:${posisi.ayah} → bucket ${bucket}${gabung ? ' (GABUNG ke induk)' : ' (jadi induk baru, Hlm.Mushaf ' + (bucket!==-1?AWAL_HALAMAN_MUSHAF[bucket].page:'?') + ')'}`);
@@ -5421,6 +5438,7 @@ function terapkanLebarKolom(halEl) {
       });
 
       simpan();
+      tampilkan();
       alert(`Selesai: ${perluGabung.length} kelompok Halaman-app digabung, ${jmlHalamanDihapus} Halaman-app kosong dihapus. Silakan cek ulang urutan kata & Bab-nya di Input, lalu buka Mode Bacaan untuk pastikan tampilannya masih benar.`);
     }
 
