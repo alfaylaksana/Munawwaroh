@@ -10,6 +10,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
   <meta name="google" content="notranslate">
   <title>Makna Gandul Pegon</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&display=swap" rel="stylesheet">
   <style>
     * {
       margin: 0;
@@ -1699,6 +1702,18 @@ body.mode-html-aktif .hasil-kotak {
 .hasil-mengalir .pegon {
   font-size: 10px;
   max-width: 80px;
+}
+
+.baca-basmalah {
+  display: block;
+  text-align: center;
+  direction: rtl;
+  font-family: 'Aref Ruqaa', serif;
+  font-weight: 700;
+  font-size: calc(38px * var(--fs));
+  color: #7a5a20;
+  margin: 10px 0 16px;
+  cursor: default;
 }
 
 .hasil-mengalir {
@@ -3420,6 +3435,8 @@ function togglePopupTerjemahan(el, nomorAyat) {
     // kalau beda (kemungkinan ada kata yg digabung/dipisah beda),
     // fallback ke teks input sendiri (arab-input) supaya tidak ada
     // kata yang salah tempel atau hilang.
+    const BASMALAH_NORMAL = normalisasiUntukCocokkan('بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ');
+
     function bangunTeksMengalir(kataList, nomorSurah) {
       if (!kataList.length) return '';
       const grup = [];
@@ -3436,7 +3453,7 @@ function togglePopupTerjemahan(el, nomorAyat) {
         : `bukaKartuBaca(event,'${srcId}')`;
 
       let html = '<div class="hasil-mengalir" dir="rtl">';
-      grup.forEach(g => {
+      grup.forEach((g, idxGrup) => {
         const akhir = g[g.length - 1];
         const ayahNum = akhir.nomor ? arabKeAngka(akhir.nomor) : null;
         let kataLuar = null;
@@ -3447,7 +3464,22 @@ function togglePopupTerjemahan(el, nomorAyat) {
             if (potongan.length === g.length) kataLuar = potongan;
           }
         }
+
+        // Basmalah di awal surah: kalau 4 kata pertama grup ini cocok dgn
+        // lafal Basmalah, tampilkan terpisah (artistik) dan mulai ayat
+        // sesudahnya di baris baru — bukan digabung mengalir bareng ayat 1.
+        let gStart = 0;
+        if (idxGrup === 0 && ayahNum === 1 && g.length > 4) {
+          const empatPertama = g.slice(0, 4).map(it => it.arab).join(' ');
+          if (normalisasiUntukCocokkan(empatPertama) === BASMALAH_NORMAL) {
+            const teksBasmalah = kataLuar ? kataLuar.slice(0, 4).join(' ') : g.slice(0, 4).map(it => prosesHarakat(it.arab)).join(' ');
+            html += `<span class="baca-basmalah">${teksBasmalah}</span>`;
+            gStart = 4;
+          }
+        }
+
         g.forEach((item, i) => {
+          if (i < gStart) return;
           const teksTampil = kataLuar ? kataLuar[i] : prosesHarakat(item.arab);
           const cls = kataLuar ? 'baca-kata' : 'baca-kata baca-fallback';
           const titleAttr = kataLuar ? '' : ' title="Teks dari input sendiri (belum tersedia/tersinkron dari sumber Utsmani luar)"';
