@@ -3119,6 +3119,7 @@ body.mode-html-aktif .hasil-kotak {
           <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
           <button class="float-drop-item" onclick="bersihkanSemuaPegonJawa();tutupFloatDropdown()">🧹 Bersihkan Pegon Jawa</button>
           <button class="float-drop-item" onclick="cekPulihkanCadangan();tutupFloatDropdown()">🔄 Cek Cadangan Lokal</button>
+          <button class="float-drop-item" onclick="bersihkanHalamanLamaServer();tutupFloatDropdown()" style="color:#a0402a;">🧹 Bersihkan Dokumen Halaman Lama di Server</button>
           <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
           <button class="float-drop-item" onclick="konversiSemuaNomorKeArab();tutupFloatDropdown()">١٢٣ Konversi Nomor Ayat ke Arab</button>
           <button class="float-drop-item" onclick="deteksiNomorSurahSemuaBab();tutupFloatDropdown()">📖 Deteksi No. Surah (cocokkan isi teks)</button>
@@ -4938,6 +4939,7 @@ function tambahHalamanDaftarKode(data = {}) {
         document.getElementById(id)?.remove();
         updateNavInput();
         updateTombolHalamanTetap();
+        simpan(true); // bersihkan juga dokumen halaman lama yg jadi tak terpakai di server
       }
     }
 
@@ -5469,7 +5471,7 @@ function terapkanLebarKolom(halEl) {
         }
       });
 
-      simpan();
+      simpan(true); // bersihkan dokumen halaman lama di server, krn ada Halaman-app yg dihapus
       tampilkan();
       alert(`Selesai: ${perluGabung.length} kelompok Halaman-app digabung, ${jmlHalamanDihapus} Halaman-app kosong dihapus. Silakan cek ulang urutan kata & Bab-nya di Input, lalu buka Mode Bacaan untuk pastikan tampilannya masih benar.`);
     }
@@ -6279,6 +6281,27 @@ html += `</div>`;
       return total;
     }
 
+    function bersihkanHalamanLamaServer() {
+      if (!REF_HALAMAN) { alert('Firestore tidak tersedia.'); return; }
+      const jumlahSekarang = document.querySelectorAll('.halaman-input').length;
+      if (!confirm(`Cek & hapus dokumen Halaman di server yang nomornya ≥ ${jumlahSekarang} (sisa dari halaman yang pernah dihapus/digabung tapi belum sempat terhapus dari server). Data yang masih dipakai TIDAK akan disentuh. Lanjutkan?`)) return;
+      REF_HALAMAN.get().then(snap => {
+        const hapus = [];
+        const idDihapus = [];
+        snap.forEach(doc => {
+          const idx = parseInt(doc.id, 10);
+          if (idx >= jumlahSekarang) { hapus.push(doc.ref.delete()); idDihapus.push(doc.id); }
+        });
+        return Promise.all(hapus).then(() => idDihapus);
+      }).then(idDihapus => {
+        if (!idDihapus.length) {
+          alert('Tidak ada dokumen Halaman lama yang perlu dibersihkan — server sudah sesuai.');
+        } else {
+          alert(`Selesai: ${idDihapus.length} dokumen Halaman lama dihapus dari server (nomor: ${idDihapus.join(', ')}).`);
+        }
+      }).catch(err => alert('Gagal membersihkan: ' + err.message));
+    }
+
     function cekPulihkanCadangan() {
       let cadangan;
       try {
@@ -6316,11 +6339,11 @@ html += `</div>`;
       alert(`${terisi.length} field Pegon Jawa sudah dikosongkan.`);
     }
 
-    function simpan() {
+    function simpan(bersihkanLama = false) {
       clearTimeout(_simpanTimer);
       _simpanTimer = setTimeout(() => {
         const data = ambilSemuaData();
-        simpanDB(data).then(() => {
+        simpanDB(data, bersihkanLama).then(() => {
           tampilkanNotifSimpan('tersimpan', false);
         }).catch((err) => {
           // fallback localStorage jika Firestore gagal — TANDAI beda dari
