@@ -1161,9 +1161,11 @@ body.mode-html-aktif .hasil-kotak {
   color: #a07840;
   font-style: normal;
   font-weight: normal;
+  padding-top: 2px;
   padding-bottom: 2px;
-  margin-top: 40px;
-  margin-bottom: 4px;
+  margin-top: 20px;
+  margin-bottom: 2px;
+  border-top: 1px dotted #d8c896;
   border-bottom: 1px dotted #d8c896;
 }
     
@@ -1627,10 +1629,10 @@ body.mode-html-aktif .hasil-kotak {
     }
 
     .hasil-bab-judul-arab {
-      font-size: calc(56px * var(--fs));
+      font-size: calc(84px * var(--fs));
   font-weight: bold;
       color: #1a1208;
-      line-height: 1.5;
+      line-height: 1.4;
       
     }
 
@@ -1650,16 +1652,16 @@ body.mode-html-aktif .hasil-kotak {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 30px;
+  min-width: 22px;
   border: 1px solid #c9a84c;
   border-radius: 2px;
-  font-size: calc(26px * var(--fs));
+  font-size: calc(20px * var(--fs));
   font-weight: bold;
   color: #6b4e1a;
   background: #fffdf7;
-  padding: 0 6px;
-  height: calc(52px * var(--fs));
-  max-height: 64px;
+  padding: 0 5px;
+  height: calc(39px * var(--fs));
+  max-height: 48px;
   overflow: hidden;
   margin-bottom: 8px;
 }
@@ -2658,9 +2660,11 @@ body.mode-html-aktif .hasil-kotak {
   color: #a07840;
   font-style: normal;
   font-weight: normal;
+  padding-top: 2px;
   padding-bottom: 2px;
-  margin-top: 40px;
-  margin-bottom: 4px;
+  margin-top: 20px;
+  margin-bottom: 2px;
+  border-top: 1px dotted #d8c896;
   border-bottom: 1px dotted #d8c896;
 }
 
@@ -5442,7 +5446,7 @@ function terapkanLebarKolom(halEl) {
             if (bucket !== -1) {
               const nomorMushaf = AWAL_HALAMAN_MUSHAF[bucket].page;
               elHasil.querySelectorAll('.nomor-halaman-hasil').forEach(b => {
-                b.textContent = 'Hlm. Mushaf ' + nomorMushaf;
+                b.textContent = 'Halaman ' + nomorMushaf;
               });
             }
           }
@@ -6827,8 +6831,8 @@ html += `</div>`;
         // tombol maintenance sekali saja di device ini, apapun status
         // sebelumnya — supaya tdk ketinggalan aktif tanpa disadari. Sesudah
         // ini toggle 5x-ketuk-footer bekerja normal seperti biasa.
-        if (localStorage.getItem('munawwaroh_admin_migrasi_2026_08_12') !== '1') {
-          localStorage.setItem('munawwaroh_admin_migrasi_2026_08_12', '1');
+        if (localStorage.getItem('munawwaroh_admin_migrasi_2026_08_12b') !== '1') {
+          localStorage.setItem('munawwaroh_admin_migrasi_2026_08_12b', '1');
           setModeAdmin(false);
           return;
         }
