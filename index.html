@@ -6844,7 +6844,10 @@ html += `</div>`;
       // lagi dengan sendirinya tanpa perlu diingat-ingat utk dimatikan.
       setModeAdmin(false);
     }
-
+    function toggleInputTerlihat() {
+  const aktif = document.body.classList.toggle('tampilkan-input');
+  if (aktif) window.scrollTo({ top: 0, behavior: 'smooth' });
+}
     function init() {
       initModeAdmin();
       Promise.allSettled([muat(), muatDataUthmani()]).then(([hasilMuat]) => {
