@@ -1153,15 +1153,18 @@ body.mode-html-aktif .hasil-kotak {
   white-space: pre-wrap;
 }
   .nomor-halaman-hasil {
-  align-items: center bottom;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  font-size: 24px;
+  gap: 6px;
+  font-size: 12px;
   color: #a07840;
-  font-style: italic;
-      
-  padding-top: 10px;
-      padding-bottom: 10px
-  position: absolute
+  font-style: normal;
+  font-weight: normal;
+  padding-bottom: 2px;
+  margin-top: 40px;
+  margin-bottom: 4px;
+  border-bottom: 1px dotted #d8c896;
 }
     
     .hasil-bab-section {
@@ -1609,26 +1612,25 @@ body.mode-html-aktif .hasil-kotak {
 
     .hasil-bab-judul {
       display: flex;
-      flex-direction: row;
-      justify-content: flex-start;
+      flex-direction: column;
+      justify-content: center;
       align-items: center;
       margin-bottom: 30px;
       margin-top: 0;
       direction: rtl;
-      padding-right: 10px;
-      
+      text-align: center;
     }
 
     .hasil-bab-judul-teks {
-      text-align: right;
+      text-align: center;
       padding: 2px 8px 0px;
     }
 
     .hasil-bab-judul-arab {
-      font-size: calc(46px * var(--fs));
+      font-size: calc(56px * var(--fs));
   font-weight: bold;
       color: #1a1208;
-      line-height: 1.6;
+      line-height: 1.5;
       
     }
 
@@ -1659,7 +1661,7 @@ body.mode-html-aktif .hasil-kotak {
   height: calc(52px * var(--fs));
   max-height: 64px;
   overflow: hidden;
-  margin-top: 15px;
+  margin-bottom: 8px;
 }
 
     .pemisah-baris {
@@ -2651,12 +2653,15 @@ body.mode-html-aktif .hasil-kotak {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  font-size: 24px;
+  gap: 6px;
+  font-size: 12px;
   color: #a07840;
-  font-style: italic;
-  margin-top: 16px;
-  margin-bottom: 16px;
+  font-style: normal;
+  font-weight: normal;
+  padding-bottom: 2px;
+  margin-top: 40px;
+  margin-bottom: 4px;
+  border-bottom: 1px dotted #d8c896;
 }
 
     /* ukuran di HTML */
@@ -3209,6 +3214,11 @@ body.mode-html-aktif .hasil-kotak {
     let pegonTersembunyi = true,
       kodeTersembunyi = true;
     let modeBacaanAktif = true; // layout mengalir ala mushaf; terpisah dari toggle Pegon/Kode di atas, supaya keduanya bisa dicoba tampil bareng
+    // Popup edit inline (klik kata di halaman Hasil) — sengaja dipisah dari
+    // mode-admin (yg mengatur tampil/sembunyi halaman Input & toolbar
+    // maintenance), krn ini yg dipakai utk edit sehari-hari dan harus tetap
+    // bisa dipakai meski halaman Input sedang disembunyikan. Default ON.
+    let editPopupAktif = true;
     let hideTimer = null,
       pindahBabId = null,
       halamanAktifId = null;;
@@ -3459,7 +3469,10 @@ function togglePopupTerjemahan(el, nomorAyat) {
       });
       if (acc.length) grup.push(acc);
 
-      const isAdmin = document.body.classList.contains('mode-admin');
+      // Popup edit inline (klik kata di halaman Hasil) TIDAK lagi digantung ke
+      // mode-admin — supaya bisa dipakai sehari-hari tanpa perlu menampilkan
+      // halaman Input & toolbar maintenance yang jarang dipakai.
+      const isAdmin = editPopupAktif;
       const klikKata = (srcId) => isAdmin
         ? `bukaEditPegonInline(event,'${srcId}')`
         : `bukaKartuBaca(event,'${srcId}')`;
@@ -5419,10 +5432,10 @@ function terapkanLebarKolom(halEl) {
             elHasil.querySelectorAll('.nomor-halaman-hasil').forEach(b => b.remove());
             while (elHasil.firstChild) elIndukAktif.appendChild(elHasil.firstChild);
             elHasil.remove();
-            // Badge milik induk harus selalu di posisi PALING AKHIR (bukan
-            // ketinggalan di tengah, karena konten baru barusan ditambahkan setelahnya)
+            // Badge milik induk selalu di posisi PALING AWAL (di atas halaman,
+            // bukan di bawah/akhir)
             const badgeInduk = elIndukAktif.querySelector('.nomor-halaman-hasil');
-            if (badgeInduk) elIndukAktif.appendChild(badgeInduk);
+            if (badgeInduk) elIndukAktif.insertBefore(badgeInduk, elIndukAktif.firstChild);
           } else {
             elIndukAktif = elHasil;
             bucketSebelumnya = bucket;
@@ -6011,7 +6024,7 @@ document.querySelectorAll('.halaman-input').forEach((hal, hIdx) => {
                   } else {
                     rujukanRowHtml = `<div class="rujukan-kosong"></div>`;
                   }
-                  html += `<div class="syiir-kata-blok" onclick="if (!modeBacaanAktif) { if(!event.target.closest('.pegon')) lompatKeInput('${item.id}'); } else if (document.body.classList.contains('mode-admin')) { bukaEditPegonInline(event,'${item.id}'); } else { bukaKartuBaca(event,'${item.id}'); }" style="cursor:pointer;">
+                  html += `<div class="syiir-kata-blok" onclick="if (!modeBacaanAktif) { if(!event.target.closest('.pegon')) lompatKeInput('${item.id}'); } else if (editPopupAktif) { bukaEditPegonInline(event,'${item.id}'); } else { bukaKartuBaca(event,'${item.id}'); }" style="cursor:pointer;">
                     ${kodeHtml}
                     <span class="arab" data-asli="${arab}">${arabTampil}</span>
                     <div class="bawah-kata">
@@ -6095,7 +6108,7 @@ if(arab)kataList.push({kode,arab,maknaIndo,maknaJawa,nomor,krKanan,paksaBaris,be
             const nomorHtml = item.nomor ? `<div class="nomor-ayat" onclick="event.stopPropagation(); togglePopupTerjemahan(this, '${item.nomor}')">${item.nomor}</div>` : '';
             const geser = item.geserPegon ? parseInt(item.geserPegon) : 0;
             const geserStyle = geser ? `style="margin-right:${geser}px;"` : '';
-            html += `<div class="kata-blok ${zebra}${item.nomor?' ada-nomor ujung-ayat':''}${item.belumAdaArti?' belum-ada-arti':''}" onclick="if (!modeBacaanAktif) { if(!event.target.closest('.pegon')) lompatKeInput('${item.srcId}'); } else if (document.body.classList.contains('mode-admin')) { bukaEditPegonInline(event,'${item.srcId}'); } else { bukaKartuBaca(event,'${item.srcId}'); }" style="cursor:pointer;" title="${item.belumAdaArti?'Belum ada terjemahan':''}">
+            html += `<div class="kata-blok ${zebra}${item.nomor?' ada-nomor ujung-ayat':''}${item.belumAdaArti?' belum-ada-arti':''}" onclick="if (!modeBacaanAktif) { if(!event.target.closest('.pegon')) lompatKeInput('${item.srcId}'); } else if (editPopupAktif) { bukaEditPegonInline(event,'${item.srcId}'); } else { bukaKartuBaca(event,'${item.srcId}'); }" style="cursor:pointer;" title="${item.belumAdaArti?'Belum ada terjemahan':''}">
             ${kodeHtml}
             <span class="arab" data-asli="${item.arab}">${arabTampil}</span>
             <div class="bawah-kata">
@@ -6132,6 +6145,15 @@ html += `</div>`;
       }
       hasilEl.innerHTML = html;
       hasilEl.dataset.pernahRender = '1';
+
+      // Badge nomor halaman (mis. "٥" atau "Hlm. Mushaf 582") dibuat di
+      // AKHIR saat generate HTML di atas (lebih gampang programnya), tapi
+      // tampilannya harus di ATAS/awal tiap halaman — pindahkan tiap badge
+      // jadi anak pertama dari .hasil-halaman induknya.
+      hasilEl.querySelectorAll('.hasil-halaman').forEach(hal => {
+        const badge = hal.querySelector('.nomor-halaman-hasil');
+        if (badge && hal.firstChild !== badge) hal.insertBefore(badge, hal.firstChild);
+      });
 
       // Basmalah artistik: pas-kan otomatis ke lebar layar (glyph ligature-nya
       // punya lebar tidak proporsional dgn font-size, jadi clamp() CSS saja
@@ -6780,7 +6802,7 @@ html += `</div>`;
     function ketukAdmin(e) {
       _tapAdminCount++;
       clearTimeout(_tapAdminTimer);
-      _tapAdminTimer = setTimeout(() => { _tapAdminCount = 0; }, 2500);
+      _tapAdminTimer = setTimeout(() => { _tapAdminCount = 0; }, 4000);
       const el = e && e.target;
       if (el) {
         el.style.color = '#2d6a4f';
@@ -6800,7 +6822,18 @@ html += `</div>`;
       document.body.classList.toggle('mode-admin', aktif);
     }
     function initModeAdmin() {
-      try { setModeAdmin(localStorage.getItem('munawwaroh_admin') === '1'); } catch (e) {}
+      try {
+        // Migrasi satu kali (2026-08-12): paksa sembunyikan halaman Input &
+        // tombol maintenance sekali saja di device ini, apapun status
+        // sebelumnya — supaya tdk ketinggalan aktif tanpa disadari. Sesudah
+        // ini toggle 5x-ketuk-footer bekerja normal seperti biasa.
+        if (localStorage.getItem('munawwaroh_admin_migrasi_2026_08_12') !== '1') {
+          localStorage.setItem('munawwaroh_admin_migrasi_2026_08_12', '1');
+          setModeAdmin(false);
+          return;
+        }
+        setModeAdmin(localStorage.getItem('munawwaroh_admin') === '1');
+      } catch (e) {}
     }
 
     function init() {
