@@ -21,6 +21,15 @@
       font-style: normal;
       font-display: swap;
     }
+    body:not(.mode-admin) .maintenance-only {
+  display: none !important;
+}
+#wrapMaintenance {
+  display: none !important;
+}
+body.mode-admin.tampilkan-input #wrapMaintenance {
+  display: block !important;
+}
     * {
       margin: 0;
       padding: 0;
