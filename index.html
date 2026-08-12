@@ -1161,18 +1161,17 @@ body.mode-html-aktif .hasil-kotak {
   color: #a07840;
   font-style: normal;
   font-weight: normal;
-  padding-top: 2px;
-  padding-bottom: 2px;
-  margin-top: 20px;
-  margin-bottom: 2px;
-  border-top: 1px dotted #d8c896;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  margin-top: 10px;
+  margin-bottom: 0px;
   border-bottom: 1px dotted #d8c896;
 }
     
     .hasil-bab-section {
       position: relative;
       overflow: visible;
-      margin-top: 10mm;
+      margin-top: 6px;
       margin-bottom: 0px;
       padding-top: 10px;
     }
@@ -2660,11 +2659,10 @@ body.mode-html-aktif .hasil-kotak {
   color: #a07840;
   font-style: normal;
   font-weight: normal;
-  padding-top: 2px;
-  padding-bottom: 2px;
-  margin-top: 20px;
-  margin-bottom: 2px;
-  border-top: 1px dotted #d8c896;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  margin-top: 10px;
+  margin-bottom: 0px;
   border-bottom: 1px dotted #d8c896;
 }
 
@@ -6817,27 +6815,21 @@ html += `</div>`;
         const aktifSekarang = document.body.classList.contains('mode-admin');
         setModeAdmin(!aktifSekarang);
         alert(aktifSekarang
-          ? '🔒 Mode edit disembunyikan lagi di device ini.'
-          : '🔓 Mode edit diaktifkan di device ini (halaman Input & tombol maintenance kini tampil).');
+          ? '🔒 Mode edit disembunyikan lagi.'
+          : '🔓 Mode edit diaktifkan (halaman Input & tombol maintenance kini tampil) — berlaku hanya sampai halaman ini ditutup/dimuat ulang, otomatis sembunyi lagi sesudahnya.');
       }
     }
     function setModeAdmin(aktif) {
-      try { localStorage.setItem('munawwaroh_admin', aktif ? '1' : '0'); } catch (e) {}
       document.body.classList.toggle('mode-admin', aktif);
     }
     function initModeAdmin() {
-      try {
-        // Migrasi satu kali (2026-08-12): paksa sembunyikan halaman Input &
-        // tombol maintenance sekali saja di device ini, apapun status
-        // sebelumnya — supaya tdk ketinggalan aktif tanpa disadari. Sesudah
-        // ini toggle 5x-ketuk-footer bekerja normal seperti biasa.
-        if (localStorage.getItem('munawwaroh_admin_migrasi_2026_08_12b') !== '1') {
-          localStorage.setItem('munawwaroh_admin_migrasi_2026_08_12b', '1');
-          setModeAdmin(false);
-          return;
-        }
-        setModeAdmin(localStorage.getItem('munawwaroh_admin') === '1');
-      } catch (e) {}
+      // Sengaja TIDAK diingat lintas sesi (tdk pakai localStorage) — supaya
+      // halaman Input & tombol maintenance selalu mulai dalam kondisi
+      // tersembunyi tiap kali halaman dibuka/dimuat ulang, apapun yg
+      // terjadi di sesi sebelumnya. Kalau perlu dipakai, tinggal 5x ketuk
+      // footer; begitu halaman ditutup atau di-refresh, otomatis sembunyi
+      // lagi dengan sendirinya tanpa perlu diingat-ingat utk dimatikan.
+      setModeAdmin(false);
     }
 
     function init() {
