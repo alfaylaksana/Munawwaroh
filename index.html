@@ -2711,6 +2711,15 @@ body.mode-html-aktif .hasil-kotak {
   text-align: left;
 }
 
+.kartu-baca-arab {
+  font-family: 'AmiriQuran', 'Scheherazade New', serif;
+  font-size: 26px;
+  text-align: center;
+  color: #1a1208;
+  padding: 6px 0 8px;
+  border-bottom: 1px solid #f0e6c8;
+}
+
 .kartu-baca-baris {
   display: flex;
   justify-content: space-between;
@@ -3272,6 +3281,7 @@ function bukaKartuBaca(event, srcId) {
   if (!row) return;
 
   const kode = (row.querySelector('.kode-input') || {}).value || '';
+  const arab = (row.querySelector('.arab-input') || row.querySelector('.s-arab') || {}).value || '';
   const maknaIndo = (row.querySelector('.makna-indo') || row.querySelector('.s-indo') || {}).value || '';
   const maknaJawa = (row.querySelector('.makna-jawa') || row.querySelector('.s-jawa') || {}).value || '';
 
@@ -3280,9 +3290,10 @@ function bukaKartuBaca(event, srcId) {
   kartu.className = 'kartu-baca';
   kartu.innerHTML = `
     ${kode ? `<div class="kartu-baca-baris"><span class="kartu-baca-label">Kode</span><span class="kartu-baca-nilai" style="direction:rtl;">${kode}</span></div>` : ''}
-    ${maknaIndo ? `<div class="kartu-baca-baris"><span class="kartu-baca-label">Indo</span><span class="kartu-baca-nilai">${maknaIndo}</span></div>` : ''}
+    ${arab ? `<div class="kartu-baca-arab" style="direction:rtl;">${arab}</div>` : ''}
     ${maknaJawa ? `<div class="kartu-baca-baris"><span class="kartu-baca-label">Jawa</span><span class="kartu-baca-nilai" style="direction:rtl;">${maknaJawa}</span></div>` : ''}
-    ${(!kode && !maknaIndo && !maknaJawa) ? `<div class="kartu-baca-kosong">Belum ada catatan untuk kata ini.</div>` : ''}
+    ${maknaIndo ? `<div class="kartu-baca-baris"><span class="kartu-baca-label">Indo</span><span class="kartu-baca-nilai">${maknaIndo}</span></div>` : ''}
+    ${(!kode && !arab && !maknaIndo && !maknaJawa) ? `<div class="kartu-baca-kosong">Belum ada catatan untuk kata ini.</div>` : ''}
     <div class="kartu-baca-aksi">
       <button type="button" class="btn-tutup-kartu" onclick="document.querySelectorAll('.kartu-baca').forEach(k=>k.remove())">Tutup</button>
     </div>
@@ -3471,10 +3482,10 @@ function togglePopupTerjemahan(el, nomorAyat) {
       });
       if (acc.length) grup.push(acc);
 
-      // Popup edit inline (klik kata di halaman Hasil) TIDAK lagi digantung ke
-      // mode-admin — supaya bisa dipakai sehari-hari tanpa perlu menampilkan
-      // halaman Input & toolbar maintenance yang jarang dipakai.
-      const isAdmin = editPopupAktif;
+      // Popup edit inline (klik kata di halaman Hasil) SEKARANG mengikuti
+      // mode-admin — hanya admin yang bisa buka popup edit; mode user cuma
+      // dapat kartu-baca (read-only).
+      const isAdmin = document.body.classList.contains('mode-admin');
       const klikKata = (srcId) => isAdmin
         ? `bukaEditPegonInline(event,'${srcId}')`
         : `bukaKartuBaca(event,'${srcId}')`;
@@ -6026,7 +6037,7 @@ document.querySelectorAll('.halaman-input').forEach((hal, hIdx) => {
                   } else {
                     rujukanRowHtml = `<div class="rujukan-kosong"></div>`;
                   }
-                  html += `<div class="syiir-kata-blok" onclick="if (!modeBacaanAktif) { if(!event.target.closest('.pegon')) lompatKeInput('${item.id}'); } else if (editPopupAktif) { bukaEditPegonInline(event,'${item.id}'); } else { bukaKartuBaca(event,'${item.id}'); }" style="cursor:pointer;">
+                  html += `<div class="syiir-kata-blok" onclick="if (!modeBacaanAktif) { if(!event.target.closest('.pegon')) lompatKeInput('${item.id}'); } else if (document.body.classList.contains('mode-admin')) { bukaEditPegonInline(event,'${item.id}'); } else { bukaKartuBaca(event,'${item.id}'); }" style="cursor:pointer;">
                     ${kodeHtml}
                     <span class="arab" data-asli="${arab}">${arabTampil}</span>
                     <div class="bawah-kata">
@@ -6110,7 +6121,7 @@ if(arab)kataList.push({kode,arab,maknaIndo,maknaJawa,nomor,krKanan,paksaBaris,be
             const nomorHtml = item.nomor ? `<div class="nomor-ayat" onclick="event.stopPropagation(); togglePopupTerjemahan(this, '${item.nomor}')">${item.nomor}</div>` : '';
             const geser = item.geserPegon ? parseInt(item.geserPegon) : 0;
             const geserStyle = geser ? `style="margin-right:${geser}px;"` : '';
-            html += `<div class="kata-blok ${zebra}${item.nomor?' ada-nomor ujung-ayat':''}${item.belumAdaArti?' belum-ada-arti':''}" onclick="if (!modeBacaanAktif) { if(!event.target.closest('.pegon')) lompatKeInput('${item.srcId}'); } else if (editPopupAktif) { bukaEditPegonInline(event,'${item.srcId}'); } else { bukaKartuBaca(event,'${item.srcId}'); }" style="cursor:pointer;" title="${item.belumAdaArti?'Belum ada terjemahan':''}">
+            html += `<div class="kata-blok ${zebra}${item.nomor?' ada-nomor ujung-ayat':''}${item.belumAdaArti?' belum-ada-arti':''}" onclick="if (!modeBacaanAktif) { if(!event.target.closest('.pegon')) lompatKeInput('${item.srcId}'); } else if (document.body.classList.contains('mode-admin')) { bukaEditPegonInline(event,'${item.srcId}'); } else { bukaKartuBaca(event,'${item.srcId}'); }" style="cursor:pointer;" title="${item.belumAdaArti?'Belum ada terjemahan':''}">
             ${kodeHtml}
             <span class="arab" data-asli="${item.arab}">${arabTampil}</span>
             <div class="bawah-kata">
