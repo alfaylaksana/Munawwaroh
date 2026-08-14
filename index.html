@@ -3484,11 +3484,11 @@ function togglePopupTerjemahan(el, nomorAyat) {
 
       // Popup edit inline (klik kata di halaman Hasil) SEKARANG mengikuti
       // mode-admin — hanya admin yang bisa buka popup edit; mode user cuma
-      // dapat kartu-baca (read-only).
-      const isAdmin = document.body.classList.contains('mode-admin');
-      const klikKata = (srcId) => isAdmin
-        ? `bukaEditPegonInline(event,'${srcId}')`
-        : `bukaKartuBaca(event,'${srcId}')`;
+      // dapat kartu-baca (read-only). Dicek langsung di dalam string onclick
+      // (bukan sekali di sini) supaya statusnya tetap akurat walau mode-admin
+      // baru dinyalakan SETELAH halaman ini sempat dirender.
+      const klikKata = (srcId) =>
+        `document.body.classList.contains('mode-admin') ? bukaEditPegonInline(event,'${srcId}') : bukaKartuBaca(event,'${srcId}')`;
 
       let html = '<div class="hasil-mengalir" dir="rtl">';
       grup.forEach((g, idxGrup) => {
