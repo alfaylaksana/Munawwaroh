@@ -4717,6 +4717,7 @@ function tambahHalamanDaftarKode(data = {}) {
     function bukaModalGabung() {
       _gbData = null;
       _gbPosisi = 'akhir';
+      resetTombolGabung();
       document.getElementById('labelGabungFile').childNodes[0].textContent = 'Ketuk untuk pilih file JSON';
       document.getElementById('gbInfo').style.display = 'none';
       document.getElementById('gbError').style.display = 'none';
@@ -4971,32 +4972,84 @@ function tambahHalamanDaftarKode(data = {}) {
       const el = document.getElementById('gbError');
       el.textContent = 'tprs ' + pesan;
       el.style.display = 'block';
+      resetTombolGabung();
+    }
+
+    // Fingerprint konten sebuah halaman (namaBab+nomorSurah+kataList semua
+    // bab-nya) — dipakai utk deteksi duplikat, BUKAN identitas objek/index,
+    // jadi tetap kedeteksi walau field override lain (nahwu, dsb) beda.
+    function fingerprintHalaman(h) {
+      const inti = (h.babList || []).map(b => ({
+        namaBab: b.namaBab || '',
+        nomorSurah: b.nomorSurah || '',
+        kataList: b.kataList || []
+      }));
+      return JSON.stringify(inti);
+    }
+
+    let _gbSedangProses = false;
+    function resetTombolGabung() {
+      _gbSedangProses = false;
+      const btn = document.getElementById('gbBtnOk');
+      if (btn) { btn.disabled = false; btn.textContent = '🔗 Gabungkan'; }
     }
 
     function eksekusiGabung() {
       if (!_gbData) return;
+      // Cegah pencet ganda: kalau proses sebelumnya belum selesai (mis. krn
+      // tidak ada indikator visual jelas & pengguna kira belum jalan),
+      // abaikan pencet berikutnya sampai proses ini selesai/gagal.
+      if (_gbSedangProses) return;
+      _gbSedangProses = true;
+      const btnOk = document.getElementById('gbBtnOk');
+      if (btnOk) { btnOk.disabled = true; btnOk.textContent = '⏳ Memproses...'; }
       document.getElementById('gbError').style.display = 'none';
       muatDB().then(dataUtama => {
         if (!dataUtama) { tampilGbError('Data utama tidak ditemukan!'); return; }
         const halamanUtama = [...(dataUtama.halamanList || [])];
+
+        // Tolak halaman yg isinya (bab+kataList) sudah persis sama dgn
+        // halaman yg sudah ada — mencegah duplikasi (mis. akibat tombol
+        // Gabungkan kepencet berkali-kali krn tdk ada indikator proses).
+        const fingerprintAda = new Set(halamanUtama.map(fingerprintHalaman));
+        const dataBaruUnik = [];
+        let jmlDitolak = 0;
+        _gbData.forEach(h => {
+          const fp = fingerprintHalaman(h);
+          if (fingerprintAda.has(fp)) {
+            jmlDitolak++;
+          } else {
+            fingerprintAda.add(fp); // cegah duplikat antar-sesama data baru juga
+            dataBaruUnik.push(h);
+          }
+        });
+
+        if (!dataBaruUnik.length) {
+          tampilGbError(`Semua ${jmlDitolak} halaman ini isinya sudah sama persis dengan yg sudah ada — tidak ada yg digabungkan (dicegah agar tidak dobel).`);
+          return;
+        }
+
         let halamanBaru;
         if (_gbPosisi === 'akhir') {
-          halamanBaru = [...halamanUtama, ..._gbData];
+          halamanBaru = [...halamanUtama, ...dataBaruUnik];
         } else if (_gbPosisi === 'awal') {
-          halamanBaru = [..._gbData, ...halamanUtama];
+          halamanBaru = [...dataBaruUnik, ...halamanUtama];
         } else {
           const n = parseInt(document.getElementById('gbInputNomor').value);
           if (!n || n < 1 || n > halamanUtama.length) {
             tampilGbError('Nomor halaman tidak valid!'); return;
           }
-          halamanBaru = [...halamanUtama.slice(0, n), ..._gbData, ...halamanUtama.slice(n)];
+          halamanBaru = [...halamanUtama.slice(0, n), ...dataBaruUnik, ...halamanUtama.slice(n)];
         }
         const dataGabung = { ...dataUtama, halamanList: halamanBaru };
         simpanDB(dataGabung).then(() => {
           tutupModalGabung();
+          if (jmlDitolak > 0) {
+            alert(`Digabungkan ${dataBaruUnik.length} halaman. ${jmlDitolak} halaman dilewati krn isinya sudah sama persis dgn yg ada (mencegah dobel).`);
+          }
           location.reload();
         }).catch(() => tampilGbError('Gagal menyimpan!'));
-      });
+      }).catch(() => tampilGbError('Gagal memuat data utama!'));
     }
     // ─────────────────────────────────────────────────────────────
 
