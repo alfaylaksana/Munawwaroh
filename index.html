@@ -3393,17 +3393,32 @@ function bukaEditPegonInline(event, srcId) {
   const rect = el.getBoundingClientRect();
   const popupW = window.innerWidth * 0.94;
   let left = (window.innerWidth - popupW) / 2;
-  const popupH = popup.offsetHeight; // tinggi asli popup (sudah dibatasi max-height di CSS bila perlu)
-  let top = rect.bottom + 8;
-  if (top + popupH > window.innerHeight - 10) top = window.innerHeight - 10 - popupH;
-  if (top < 10) top = 10;
   popup.style.left = left + 'px';
-  popup.style.top = top + 'px';
+
+  // Reposisi popup — dipanggil ulang tiap kali TINGGI popup berubah
+  // (mis. kotak Catatan baru dibuka via "+ Tambah catatan", atau textarea
+  // di-resize manual). Kalau cuma dihitung sekali di awal, popup bisa
+  // nyanthol/terpotong di bawah begitu isinya bertambah tinggi belakangan.
+  function reposisiPopupEditPegon() {
+    const popupH = popup.offsetHeight;
+    let top = rect.bottom + 8;
+    if (top + popupH > window.innerHeight - 10) top = window.innerHeight - 10 - popupH;
+    if (top < 10) top = 10;
+    popup.style.top = top + 'px';
+  }
+  reposisiPopupEditPegon();
+
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(() => reposisiPopupEditPegon());
+    ro.observe(popup);
+    popup._roPegon = ro;
+  }
 
   setTimeout(() => {
     document.getElementById('popupEditIndo')?.focus();
     document.addEventListener('click', function handler(e) {
       if (!popup.contains(e.target)) {
+        popup._roPegon?.disconnect();
         popup.remove();
       }
     }, { once: true, capture: true });
@@ -3411,7 +3426,7 @@ function bukaEditPegonInline(event, srcId) {
 }
 
 function tutupPopupEditPegon() {
-  document.querySelectorAll('.popup-edit-pegon').forEach(p => p.remove());
+  document.querySelectorAll('.popup-edit-pegon').forEach(p => { p._roPegon?.disconnect(); p.remove(); });
 }
 
 function simpanEditPegonInline(srcId) {
