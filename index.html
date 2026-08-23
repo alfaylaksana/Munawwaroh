@@ -2718,7 +2718,7 @@ body.mode-html-aktif .hasil-kotak {
 
 .kartu-baca-arab {
   font-family: 'AmiriQuran', 'Scheherazade New', serif;
-  font-size: 26px;
+  font-size: 24px;
   text-align: center;
   color: #1a1208;
   padding: 6px 0 8px;
@@ -2748,6 +2748,14 @@ body.mode-html-aktif .hasil-kotak {
   font-size: 14px;
   color: #1a1208;
   text-align: right;
+}
+
+.kartu-baca-nilai-indo {
+  font-size: 13px;
+}
+
+.kartu-baca-nilai-catatan {
+  font-size: 12px;
 }
 
 .kartu-baca-kosong {
@@ -3314,8 +3322,8 @@ function bukaKartuBaca(event, srcId) {
     ${kode ? `<div class="kartu-baca-baris"><span class="kartu-baca-label">Kode</span><span class="kartu-baca-nilai" style="direction:rtl;">${kode}</span></div>` : ''}
     ${arab ? `<div class="kartu-baca-arab" style="direction:rtl;">${arab}</div>` : ''}
     ${maknaJawa ? `<div class="kartu-baca-baris"><span class="kartu-baca-label">Jawa</span><span class="kartu-baca-nilai" style="direction:rtl;">${maknaJawa}</span></div>` : ''}
-    ${maknaIndo ? `<div class="kartu-baca-baris"><span class="kartu-baca-label">Indo</span><span class="kartu-baca-nilai">${maknaIndo}</span></div>` : ''}
-    ${catatan ? `<div class="kartu-baca-baris"><span class="kartu-baca-label">Catatan</span><span class="kartu-baca-nilai">${catatan.replace(/</g,'&lt;')}</span></div>` : ''}
+    ${maknaIndo ? `<div class="kartu-baca-baris"><span class="kartu-baca-label">Indo</span><span class="kartu-baca-nilai kartu-baca-nilai-indo">${maknaIndo}</span></div>` : ''}
+    ${catatan ? `<div class="kartu-baca-baris"><span class="kartu-baca-label">Catatan</span><span class="kartu-baca-nilai kartu-baca-nilai-catatan">${catatan.replace(/</g,'&lt;')}</span></div>` : ''}
     ${(!kode && !arab && !maknaIndo && !maknaJawa && !catatan) ? `<div class="kartu-baca-kosong">Belum ada catatan untuk kata ini.</div>` : ''}
     <div class="kartu-baca-aksi">
       <button type="button" class="btn-tutup-kartu" onclick="document.querySelectorAll('.kartu-baca').forEach(k=>k.remove())">Tutup</button>
