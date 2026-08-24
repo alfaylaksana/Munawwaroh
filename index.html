@@ -2709,6 +2709,9 @@ body.mode-html-aktif .hasil-kotak {
   border: 1px solid #c9a84c;
   border-radius: 8px;
   padding: 10px 12px;
+  max-height: calc(100vh - 20px);
+  overflow-y: auto;
+  box-sizing: border-box;
   box-shadow: 0 4px 16px rgba(100,70,20,0.28);
   z-index: 9999;
   font-family: Georgia, serif;
@@ -2718,7 +2721,7 @@ body.mode-html-aktif .hasil-kotak {
 
 .kartu-baca-arab {
   font-family: 'AmiriQuran', 'Scheherazade New', serif;
-  font-size: 24px;
+  font-size: 23px;
   text-align: center;
   color: #1a1208;
   padding: 6px 0 8px;
@@ -2726,10 +2729,7 @@ body.mode-html-aktif .hasil-kotak {
 }
 
 .kartu-baca-baris {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 10px;
+  display: block;
   padding: 5px 0;
   border-bottom: 1px solid #f0e6c8;
 }
@@ -2737,25 +2737,30 @@ body.mode-html-aktif .hasil-kotak {
 .kartu-baca-baris:last-of-type { border-bottom: none; }
 
 .kartu-baca-label {
-  font-size: 9px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: #c9a84c;
-  flex-shrink: 0;
+  display: none;
 }
 
 .kartu-baca-nilai {
+  display: block;
   font-size: 14px;
   color: #1a1208;
-  text-align: right;
+  text-align: center;
 }
 
-.kartu-baca-nilai-indo {
+.kartu-baca-nilai-jawa {
   font-size: 13px;
 }
 
-.kartu-baca-nilai-catatan {
+.kartu-baca-nilai-indo {
+  font-family: Arial, sans-serif;
   font-size: 12px;
+  text-align: center;
+}
+
+.kartu-baca-nilai-catatan {
+  font-family: Arial, sans-serif;
+  font-size: 10px;
+  text-align: justify;
 }
 
 .kartu-baca-kosong {
@@ -2770,6 +2775,10 @@ body.mode-html-aktif .hasil-kotak {
   display: flex;
   gap: 6px;
   margin-top: 10px;
+  position: sticky;
+  bottom: 0;
+  background: #fffdf7;
+  padding-top: 6px;
 }
 
 .kartu-baca-aksi button {
@@ -3319,14 +3328,14 @@ function bukaKartuBaca(event, srcId) {
   const kartu = document.createElement('div');
   kartu.className = 'kartu-baca';
   kartu.innerHTML = `
-    ${kode ? `<div class="kartu-baca-baris"><span class="kartu-baca-label">Kode</span><span class="kartu-baca-nilai" style="direction:rtl;">${kode}</span></div>` : ''}
+    ${kode ? `<div class="kartu-baca-baris"><span class="kartu-baca-nilai" style="direction:rtl;">${kode}</span></div>` : ''}
     ${arab ? `<div class="kartu-baca-arab" style="direction:rtl;">${arab}</div>` : ''}
-    ${maknaJawa ? `<div class="kartu-baca-baris"><span class="kartu-baca-label">Jawa</span><span class="kartu-baca-nilai" style="direction:rtl;">${maknaJawa}</span></div>` : ''}
-    ${maknaIndo ? `<div class="kartu-baca-baris"><span class="kartu-baca-label">Indo</span><span class="kartu-baca-nilai kartu-baca-nilai-indo">${maknaIndo}</span></div>` : ''}
-    ${catatan ? `<div class="kartu-baca-baris"><span class="kartu-baca-label">Catatan</span><span class="kartu-baca-nilai kartu-baca-nilai-catatan">${catatan.replace(/</g,'&lt;')}</span></div>` : ''}
+    ${maknaJawa ? `<div class="kartu-baca-baris"><span class="kartu-baca-nilai kartu-baca-nilai-jawa" style="direction:rtl;">${maknaJawa}</span></div>` : ''}
+    ${maknaIndo ? `<div class="kartu-baca-baris"><span class="kartu-baca-nilai kartu-baca-nilai-indo">${maknaIndo}</span></div>` : ''}
+    ${catatan ? `<div class="kartu-baca-baris"><span class="kartu-baca-nilai kartu-baca-nilai-catatan">${catatan.replace(/</g,'&lt;')}</span></div>` : ''}
     ${(!kode && !arab && !maknaIndo && !maknaJawa && !catatan) ? `<div class="kartu-baca-kosong">Belum ada catatan untuk kata ini.</div>` : ''}
     <div class="kartu-baca-aksi">
-      <button type="button" class="btn-tutup-kartu" onclick="document.querySelectorAll('.kartu-baca').forEach(k=>k.remove())">Tutup</button>
+      <button type="button" class="btn-tutup-kartu" onclick="document.querySelectorAll('.kartu-baca').forEach(k=>{k._roKartu?.disconnect();k.remove();})">Tutup</button>
     </div>
   `;
   document.body.appendChild(kartu);
@@ -3334,18 +3343,36 @@ function bukaKartuBaca(event, srcId) {
   const rect = el.getBoundingClientRect();
   const kartuW = Math.min(280, window.innerWidth * 0.85);
   let left = rect.left + rect.width / 2 - kartuW / 2;
-  let top = rect.bottom + 8;
   if (left + kartuW > window.innerWidth - 10) left = window.innerWidth - kartuW - 10;
   if (left < 10) left = 10;
-  if (top + 160 > window.innerHeight) top = rect.top - 8 - 160;
-  if (top < 10) top = 10;
   kartu.style.left = left + 'px';
-  kartu.style.top = top + 'px';
   kartu.style.width = kartuW + 'px';
+
+  // Reposisi vertikal — dihitung ulang tiap kali tinggi kartu berubah,
+  // dan SELALU dipaksa muat di layar (baik nempel di bawah kata yg diklik
+  // ATAU digeser ke atas kalau tidak cukup ruang) — jadi tidak perlu
+  // scroll layar dulu ke atas supaya kartu kelihatan penuh.
+  function reposisiKartuBaca() {
+    const kartuH = kartu.offsetHeight;
+    let top = rect.bottom + 8;
+    if (top + kartuH > window.innerHeight - 10) top = window.innerHeight - 10 - kartuH;
+    if (top < 10) top = 10;
+    kartu.style.top = top + 'px';
+  }
+  reposisiKartuBaca();
+
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(() => reposisiKartuBaca());
+    ro.observe(kartu);
+    kartu._roKartu = ro;
+  }
 
   setTimeout(() => {
     document.addEventListener('click', function handler(e) {
-      if (!kartu.contains(e.target)) kartu.remove();
+      if (!kartu.contains(e.target)) {
+        kartu._roKartu?.disconnect();
+        kartu.remove();
+      }
     }, { once: true, capture: true });
   }, 250);
 }
