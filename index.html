@@ -2725,16 +2725,17 @@ body.mode-html-aktif .hasil-kotak {
   text-align: center;
   color: #1a1208;
   padding: 6px 0 8px;
-  border-bottom: 1px solid #f0e6c8;
 }
 
 .kartu-baca-baris {
   display: block;
   padding: 5px 0;
-  border-bottom: 1px solid #f0e6c8;
 }
 
-.kartu-baca-baris:last-of-type { border-bottom: none; }
+.kartu-baca-baris-indo {
+  border-bottom: 1px solid #f0e6c8;
+  padding-bottom: 8px;
+}
 
 .kartu-baca-label {
   display: none;
@@ -3390,7 +3391,7 @@ function bukaKartuBaca(event, srcId) {
     ${kode ? `<div class="kartu-baca-baris"><span class="kartu-baca-nilai" style="direction:rtl;">${kode}</span></div>` : ''}
     ${arab ? `<div class="kartu-baca-arab" style="direction:rtl;">${arab}</div>` : ''}
     ${maknaJawa ? `<div class="kartu-baca-baris"><span class="kartu-baca-nilai kartu-baca-nilai-jawa" style="direction:rtl;">${maknaJawa}</span></div>` : ''}
-    ${maknaIndo ? `<div class="kartu-baca-baris"><span class="kartu-baca-nilai kartu-baca-nilai-indo">${maknaIndo}</span></div>` : ''}
+    ${maknaIndo ? `<div class="kartu-baca-baris${catatan ? ' kartu-baca-baris-indo' : ''}"><span class="kartu-baca-nilai kartu-baca-nilai-indo">${maknaIndo}</span></div>` : ''}
     ${catatan ? `<div class="kartu-baca-baris"><div class="kartu-baca-nilai kartu-baca-nilai-catatan">${renderCatatanRapi(catatan)}</div></div>` : ''}
     ${(!kode && !arab && !maknaIndo && !maknaJawa && !catatan) ? `<div class="kartu-baca-kosong">Belum ada catatan untuk kata ini.</div>` : ''}
     <div class="kartu-baca-aksi">
@@ -7108,6 +7109,23 @@ html += `</div>`;
         updateNavHasil([]);
         tampilkan(); // render PERTAMA baru dilakukan setelah data Firestore + Utsmani dua-duanya siap (atau gagal), supaya Mode Bacaan langsung benar sejak awal, tidak perlu render ulang belakangan
         setTimeout(() => observeHalaman(), 500);
+
+        // ── Kembalikan posisi scroll terakhir ────────────────────────
+        // Kalau Ustaz pindah ke app lain lalu balik lagi, tab ini kadang
+        // di-reload ulang oleh OS/browser (utk hemat memori) dan tampilan
+        // "lompat" balik ke atas — padahal terakhir sedang di tengah
+        // ngedit halaman tertentu. Posisi scroll disimpan tiap kali
+        // pindah app (lihat visibilitychange di bawah) dan dikembalikan
+        // di sini SEKALI saja setelah render pertama selesai & layout
+        // sudah settle (2 rAF supaya height final sudah kehitung).
+        try {
+          const posisiTersimpan = localStorage.getItem('posisiScrollTerakhir');
+          if (posisiTersimpan !== null) {
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+              window.scrollTo({ top: parseInt(posisiTersimpan, 10) || 0 });
+            }));
+          }
+        } catch (e) {}
       }).catch(e => { alert('ERROR: ' + e.message); });
     }
 
@@ -7188,6 +7206,7 @@ html += `</div>`;
         simpanDB(ambilSemuaData()).catch(() => {
           try { localStorage.setItem('gandul_data', JSON.stringify(ambilSemuaData())); } catch(e) {}
         });
+        try { localStorage.setItem('posisiScrollTerakhir', String(window.scrollY)); } catch (e) {}
       }
     });
 
