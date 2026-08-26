@@ -5355,6 +5355,11 @@ function tambahHalamanDaftarKode(data = {}) {
       // Fokus ke input Arab baris baru
       trBaru.querySelector('.arab-input').focus();
       simpan();
+      // Refresh Mode Bacaan SEKARANG JUGA — supaya kata yang bisa diklik di
+      // layar langsung sesuai susunan baris yang baru (kalau tidak, peta
+      // klik lama masih berlaku dan bisa geser/salah sasaran begitu ada
+      // baris baru disisipkan).
+      if (modeBacaanAktif) tampilkan();
     }
     
     function toggleKolomPegon(babId) {
@@ -5552,8 +5557,13 @@ function terapkanLebarKolom(halEl) {
     }
 
     function hapusKata(id) {
-      if (confirm('Yakin ingin menghapus kata ini?'))
+      if (confirm('Yakin ingin menghapus kata ini?')) {
         document.getElementById(id)?.remove();
+        simpan();
+        // Sama seperti insertKata — refresh peta klik Mode Bacaan supaya
+        // tidak nyangkut ke kata yang sudah tidak ada / geser ke kata lain.
+        if (modeBacaanAktif) tampilkan();
+      }
     }
 
     // Konversi angka Arab <-> integer, dipakai utk renumbering otomatis
