@@ -1738,6 +1738,15 @@ body.mode-html-aktif .hasil-kotak {
   max-width: 100%;
   overflow: hidden;
   text-overflow: clip;
+  /* Disembunyikan dulu SAMPAI ukurannya benar2 pas (lihat pasBasmalah()) —
+     supaya tdk pernah kelihatan sekilas kebesaran/kepotong dulu baru
+     mengecil belakangan (device lambat bisa butuh beberapa detik sebelum
+     ukuran fontnya akurat diukur). */
+  visibility: hidden;
+}
+
+.baca-basmalah.basmalah-siap {
+  visibility: visible;
 }
 
 .hasil-mengalir {
@@ -4255,27 +4264,33 @@ function gotoHalamanHasil() {
   const navList = list._navList || [];
   const n = parseInt(document.getElementById('gotoInputHasil')?.value);
   if (isNaN(n) || n < 1) { alert('Nomor tidak valid.'); return; }
-  // Sama seperti updateNavHasil() — pakai penomoran sadar-gabungan mushaf
-  // kalau lagi Mode Bacaan, supaya nomor yg diketik = nomor yg BENAR-BENAR
-  // tertampil, dan selalu diarahkan ke indukHalId (elemen hasil yg pasti
-  // masih ada di DOM, tidak pernah ikut terhapus saat digabung).
-  const nomorMap = (modeBacaanAktif && hitungNomorHalamanBacaan()) || hitungNomorHalaman();
-  let targetHalId = null;
-  nomorMap.forEach((info, halId) => {
-    if (info.nomor === n && targetHalId === null) targetHalId = info.indukHalId || halId;
-  });
-  if (targetHalId) {
-    // Cari anchor hasil dari halId
-    const idBagian = targetHalId.replace('halaman-', '');
-    const el = document.getElementById(`hasil-halaman-${idBagian}`);
-    if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); tutupFloatDropdown(); tampilkanFloat(); return; }
-  }
-  // Fallback: cari dari navList
-  if (n <= navList.length) {
-    document.getElementById(navList[n - 1].id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  } else {
-    alert(`Halaman ${n} tidak ditemukan.`);
-  }
+  const lakukanScroll = () => {
+    // Sama seperti updateNavHasil() — pakai penomoran sadar-gabungan mushaf
+    // kalau lagi Mode Bacaan, supaya nomor yg diketik = nomor yg BENAR-BENAR
+    // tertampil, dan selalu diarahkan ke indukHalId (elemen hasil yg pasti
+    // masih ada di DOM, tidak pernah ikut terhapus saat digabung).
+    const nomorMap = (modeBacaanAktif && hitungNomorHalamanBacaan()) || hitungNomorHalaman();
+    let targetHalId = null;
+    nomorMap.forEach((info, halId) => {
+      if (info.nomor === n && targetHalId === null) targetHalId = info.indukHalId || halId;
+    });
+    if (targetHalId) {
+      const idBagian = targetHalId.replace('halaman-', '');
+      const el = document.getElementById(`hasil-halaman-${idBagian}`);
+      if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); tutupFloatDropdown(); tampilkanFloat(); return; }
+    }
+    // Fallback: cari dari navList
+    if (n <= navList.length) {
+      document.getElementById(navList[n - 1].id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      alert(`Halaman ${n} tidak ditemukan.`);
+    }
+  };
+  // Tunggu font Arab selesai dimuat (+ 2 rAF spy penyelesaian reflow Basmalah)
+  // sebelum benar2 men-scroll — kalau tidak, scroll bisa "digeser" belakangan
+  // begitu ukuran Basmalah baru selesai disesuaikan (lihat pasBasmalah()).
+  const tunggu = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+  tunggu.then(() => requestAnimationFrame(() => requestAnimationFrame(lakukanScroll)));
 }
 
 function gotoHalamanTerakhir() {
@@ -6482,12 +6497,18 @@ html += `</div>`;
             el.style.fontSize = ukuran + 'px';
             batas--;
           }
+          el.classList.add('basmalah-siap');
         });
       };
+      // requestAnimationFrame ganda SETELAH fonts.ready — memberi browser
+      // kesempatan menyelesaikan reflow/rasterisasi glyph ligature yg berat
+      // (٭ FDFD) sebelum benar2 diukur, supaya device yg agak lambat tidak
+      // mengukur terlalu dini dan menghasilkan ukuran yg keliru.
+      const jadwalkanPasBasmalah = () => requestAnimationFrame(() => requestAnimationFrame(pasBasmalah));
       if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(pasBasmalah);
+        document.fonts.ready.then(jadwalkanPasBasmalah);
       } else {
-        setTimeout(pasBasmalah, 300);
+        setTimeout(jadwalkanPasBasmalah, 300);
       }
 
       // Syiir tetap di dalam hasil-halaman sesuai posisi DOM (tidak di-appendChild keluar)
