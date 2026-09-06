@@ -3513,6 +3513,9 @@ body.mode-html-aktif .hasil-kotak {
 
     // Klik/tap di area halaman hasil (bacaan) = user mau baca, jadi
     // Daftar Isi langsung ditutup SEKETIKA (bukan nunggu 5 detik).
+    // Pakai fase CAPTURE (bukan bubble) krn klik nomor ayat/kata Arab di
+    // dalam #hasil memanggil event.stopPropagation() duluan — kalau pakai
+    // fase bubble biasa, event itu tidak akan pernah sampai ke listener ini.
     document.addEventListener('click', (e) => {
       const hasilEl = document.getElementById('hasil');
       if (!hasilEl || !hasilEl.contains(e.target)) return;
@@ -3520,7 +3523,7 @@ body.mode-html-aktif .hasil-kotak {
       if (!panel || !panel.classList.contains('tampil')) return;
       clearTimeout(hideDaftarIsiJuz30Timer);
       panel.classList.remove('tampil');
-    });
+    }, true);
 
     function lompatKeSurahJuz30(nomorSurah) {
       const panel = document.getElementById('panelDaftarIsiJuz30');
