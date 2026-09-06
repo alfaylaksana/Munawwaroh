@@ -3158,6 +3158,16 @@ body.mode-html-aktif .hasil-kotak {
 }
 }
   </style>
+<script>
+  // Mulai proses/decode font AmiriQuran (base64, berat) SEDINI mungkin —
+  // paralel dengan pemuatan data (IndexedDB/Firestore) & skrip lain di bawah,
+  // supaya nanti saat halaman pertama kali dirender, document.fonts.ready
+  // sudah (atau nyaris) selesai duluan — bukan baru mulai dihitung saat itu
+  // juga. Ini yang bikin render pertama terasa berat/nunggu lama sebelumnya.
+  try {
+    document.fonts.load('700 48px AmiriQuran').catch(() => {});
+  } catch (e) {}
+</script>
 <script src="libs/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.2.0/firebase-app-compat.js"></script>
@@ -3500,6 +3510,17 @@ body.mode-html-aktif .hasil-kotak {
     document.addEventListener('touchmove', resetTimerDaftarIsiJuz30);
     document.addEventListener('mousemove', resetTimerDaftarIsiJuz30);
     document.addEventListener('scroll', resetTimerDaftarIsiJuz30);
+
+    // Klik/tap di area halaman hasil (bacaan) = user mau baca, jadi
+    // Daftar Isi langsung ditutup SEKETIKA (bukan nunggu 5 detik).
+    document.addEventListener('click', (e) => {
+      const hasilEl = document.getElementById('hasil');
+      if (!hasilEl || !hasilEl.contains(e.target)) return;
+      const panel = document.getElementById('panelDaftarIsiJuz30');
+      if (!panel || !panel.classList.contains('tampil')) return;
+      clearTimeout(hideDaftarIsiJuz30Timer);
+      panel.classList.remove('tampil');
+    });
 
     function lompatKeSurahJuz30(nomorSurah) {
       const panel = document.getElementById('panelDaftarIsiJuz30');
