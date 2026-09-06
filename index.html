@@ -3527,19 +3527,29 @@ body.mode-html-aktif .hasil-kotak {
 
     function lompatKeSurahJuz30(nomorSurah) {
       const panel = document.getElementById('panelDaftarIsiJuz30');
-      let halIdTarget = null;
-      document.querySelectorAll('.halaman-input').forEach(hal => {
-        if (halIdTarget) return;
-        const cocok = [...hal.querySelectorAll('.bab-nomor-surah')].some(inp => parseInt(inp.value.trim()) === nomorSurah);
-        if (cocok) halIdTarget = hal.id;
-      });
+      const semuaHalaman = [...document.querySelectorAll('.halaman-input')];
+      let idxTarget = -1;
+      for (let i = 0; i < semuaHalaman.length; i++) {
+        const cocok = [...semuaHalaman[i].querySelectorAll('.bab-nomor-surah')].some(inp => parseInt(inp.value.trim()) === nomorSurah);
+        if (cocok) { idxTarget = i; break; }
+      }
       if (panel) { panel.classList.remove('tampil'); clearTimeout(hideDaftarIsiJuz30Timer); }
-      if (!halIdTarget) return;
-      const idBagian = halIdTarget.replace('halaman-', '');
+      if (idxTarget === -1) return;
+      // Halaman-app tujuan bisa saja sudah "dilebur" ke Halaman-app SEBELUMNYA
+      // kalau berbagi 1 halaman fisik mushaf yang sama (lihat
+      // gabungkanHalamanMushafBacaan — elemen hasil-nya sendiri lalu dihapus
+      // dari DOM). Telusuri mundur ke Halaman-app terdekat yg elemen hasilnya
+      // masih ada — itulah "induk" yg sekarang menampung isinya.
+      let elTarget = null;
+      for (let i = idxTarget; i >= 0; i--) {
+        const halId = semuaHalaman[i].id.replace('halaman-', '');
+        const el = document.getElementById('hasil-halaman-' + halId);
+        if (el) { elTarget = el; break; }
+      }
+      if (!elTarget) return;
       const tunggu = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
       tunggu.then(() => requestAnimationFrame(() => requestAnimationFrame(() => {
-        const el = document.getElementById(`hasil-halaman-${idBagian}`);
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        elTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
       })));
     }
 
