@@ -6687,8 +6687,21 @@ html += `</div>`;
         html += pengantarHtml;
         navList.push(pengantarNav);
       }
+      // Render pertama kali (buka halaman/reload): sembunyikan SELURUH hasil
+      // dulu sampai basmalah + font-nya benar2 siap (lihat pasBasmalah di
+      // bawah), supaya nomor ayat, teks ayat, dan basmalah muncul BARENG
+      // sekaligus — bukan basmalah nongol belakangan sendirian. Render
+      // ULANG (mis. sedang edit di mode admin) TIDAK disembunyikan, supaya
+      // tidak kelap-kelip tiap kali mengetik.
+      const renderPertamaKali = hasilEl.dataset.pernahRender !== '1';
       hasilEl.innerHTML = html;
       hasilEl.dataset.pernahRender = '1';
+      if (renderPertamaKali) {
+        hasilEl.style.visibility = 'hidden';
+        // Jaring pengaman: kalau karena sebab apa pun proses di atas gagal
+        // jalan, jangan sampai layar tersembunyi selamanya.
+        setTimeout(() => { hasilEl.style.visibility = 'visible'; }, 4000);
+      }
 
       // Badge nomor halaman (mis. "٥" atau "Hlm. Mushaf 582") dibuat di
       // AKHIR saat generate HTML di atas (lebih gampang programnya), tapi
@@ -6719,6 +6732,8 @@ html += `</div>`;
           }
           el.classList.add('basmalah-siap');
         });
+        // Baru sekarang tampilkan semuanya bareng (lihat renderPertamaKali di atas).
+        if (renderPertamaKali) hasilEl.style.visibility = 'visible';
       };
       // requestAnimationFrame ganda SETELAH fonts.ready — memberi browser
       // kesempatan menyelesaikan reflow/rasterisasi glyph ligature yg berat
