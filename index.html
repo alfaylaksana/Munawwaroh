@@ -3560,6 +3560,14 @@ body.mode-html-aktif .hasil-kotak {
         if (el) { elTarget = el; break; }
       }
       if (!elTarget) return;
+      // Kalau halaman-app ini sudah dilebur (berbagi 1 halaman fisik dgn
+      // bab lain), elTarget di atas adalah kontainer GABUNGAN — cari heading
+      // bab yg spesifik di dalamnya (ditandai data-bab-surah saat render)
+      // supaya scroll-nya tepat ke bab yg diklik, bukan ke bab pertama di
+      // halaman fisik itu (mis. klik "Al-Lail" tapi malah ke "Asy-Syams"
+      // krn keduanya berbagi 1 halaman mushaf).
+      const elJudulSpesifik = elTarget.querySelector(`.hasil-bab-judul[data-bab-surah="${nomorSurah}"]`);
+      if (elJudulSpesifik) elTarget = elJudulSpesifik;
       const tunggu = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
       tunggu.then(() => requestAnimationFrame(() => requestAnimationFrame(() => {
         elTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -6659,8 +6667,9 @@ if(arab)kataList.push({kode,arab,maknaIndo,maknaJawa,nomor,krKanan,paksaBaris,be
           const judulIndo = bab.querySelector('.bab-judul-indo')?.value.trim() || '';
           const judulJawa = bab.querySelector('.bab-judul-jawa')?.value.trim() || '';
           const judulNomor = bab.querySelector('.bab-judul-nomor')?.value.trim() || '';
+          const nomorSurahGrid = bab.querySelector('.bab-nomor-surah')?.value.trim() || '';
           if (namaBab || judulNomor) {
-            html += `<div class="hasil-bab-judul">
+            html += `<div class="hasil-bab-judul"${nomorSurahGrid?` data-bab-surah="${nomorSurahGrid}"`:''}>
     ${judulNomor?`<div class="hasil-bab-judul-nomor">${judulNomor}</div>`:''}
     <div class="hasil-bab-judul-teks">
       ${namaBab?`<span class="hasil-bab-judul-arab">${namaBab}</span>`:''}
@@ -6670,7 +6679,6 @@ if(arab)kataList.push({kode,arab,maknaIndo,maknaJawa,nomor,krKanan,paksaBaris,be
   </div>`;
           }
           if(!kataList.length){html+=`</div></div>`; return; }
-          const nomorSurahGrid = bab.querySelector('.bab-nomor-surah')?.value.trim() || '';
           if (modeBacaanAktif) {
             html += bangunTeksMengalir(kataList, nomorSurahGrid);
             html += `</div>`;
