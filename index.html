@@ -916,6 +916,14 @@ th.col-jawa {
          tertutup tombol floating (.float-bar, fixed di bottom:24px). */
       padding-bottom: 90px;
     }
+    .baca-penutup {
+      display: block;
+      width: 100%;
+      text-align: center;
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid #e6d9b8;
+    }
 /*
     .hasil-kotak::before {
       content: '';
@@ -3908,6 +3916,12 @@ function togglePopupTerjemahan(el, nomorAyat) {
       grup.forEach((g, idxGrup) => {
         const akhir = g[g.length - 1];
         const ayahNum = akhir.nomor ? arabKeAngka(akhir.nomor) : null;
+        // Grup penutup: kalimat tanpa nomor ayat yang ditaruh di ujung bab
+        // (mis. "صدق الله العظيم") — dulu ikut menyambung dalam alur ayat
+        // terakhir sehingga nyaris tak kelihatan; sekarang dipisah ke
+        // barisnya sendiri.
+        const isPenutup = ayahNum === null && idxGrup === grup.length - 1;
+        if (isPenutup) html += '<div class="baca-penutup">';
         let kataLuar = null;
         if (dataUthmaniSiap && nomorSurah && ayahNum !== null) {
           const teksLuar = petaUthmani[nomorSurah + ':' + ayahNum];
@@ -3977,6 +3991,7 @@ function togglePopupTerjemahan(el, nomorAyat) {
         if (ayahNum !== null) {
           html += `<span class="baca-ayat-nomor" onclick="event.stopPropagation(); togglePopupTerjemahan(this, '${kunciTerjemah(nomorSurah, akhir.nomor)}')">${akhir.nomor}</span> `;
         }
+        if (isPenutup) html += '</div>';
       });
       html += '</div>';
       return html;
