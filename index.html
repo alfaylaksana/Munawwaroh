@@ -3185,6 +3185,7 @@ body.mode-html-aktif .hasil-kotak {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.2.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.2.0/firebase-auth-compat.js"></script>
 </head>
 
 <body>
@@ -3282,9 +3283,7 @@ body.mode-html-aktif .hasil-kotak {
   </div>
 
   <div class="hasil-wrapper">
-    <div class="hasil-kotak" id="hasil">
-      <div style="text-align:center;color:#bba060;font-style:italic;font-size:13px;padding:30px 0;">Hasil makna gandul akan tampil di sini</div>
-    </div>
+    <div class="hasil-kotak" id="hasil"></div>
   </div>
 
   <span id="footerKetuk" onclick="ketukAdmin(event)">Coding by Claude · Anthropic 🤖</span>
@@ -6877,10 +6876,11 @@ html += `</div>`;
       messagingSenderId: "666248558558",
       appId: "1:666248558558:web:d55a1a4583faf26c190f4f"
     };
-    let dbFirestore = null, REF_PROFIL = null, REF_HALAMAN = null;
+    let dbFirestore = null, REF_PROFIL = null, REF_HALAMAN = null, authFirebase = null;
     try {
       firebase.initializeApp(firebaseConfig);
       dbFirestore = firebase.firestore();
+      authFirebase = firebase.auth();
       // Offline persistence: data dibaca/ditulis tetap jalan tanpa internet
       // (disimpan lokal via IndexedDB oleh Firestore sendiri), lalu otomatis
       // disinkronkan ke server begitu koneksi kembali ada.
@@ -7446,10 +7446,35 @@ html += `</div>`;
       if (_tapAdminCount >= 5) {
         _tapAdminCount = 0;
         const aktifSekarang = document.body.classList.contains('mode-admin');
-        setModeAdmin(!aktifSekarang);
-        alert(aktifSekarang
-          ? '🔒 Menu Data disembunyikan lagi (tersimpan, tetap mode user walau reload).'
-          : '🔓 Menu Data diaktifkan (tombol 💾 kini tampil) — tersimpan, tetap mode admin walau reload, sampai diubah manual lagi.');
+        if (aktifSekarang) {
+          // Nonaktifkan mode admin = sekalian logout, biar bersih.
+          setModeAdmin(false);
+          if (authFirebase) authFirebase.signOut().catch(() => {});
+          alert('🔒 Menu Data disembunyikan lagi & keluar dari akun admin.');
+          return;
+        }
+        // Mengaktifkan mode admin — wajib login dulu.
+        if (!authFirebase) {
+          alert('Firebase Auth belum siap. Coba lagi sebentar.');
+          return;
+        }
+        if (authFirebase.currentUser) {
+          setModeAdmin(true);
+          alert('🔓 Menu Data diaktifkan (tombol 💾 kini tampil) — masih login sebagai ' + authFirebase.currentUser.email);
+          return;
+        }
+        const email = prompt('Email admin:');
+        if (!email) return;
+        const pass = prompt('Kata sandi:');
+        if (!pass) return;
+        authFirebase.signInWithEmailAndPassword(email.trim(), pass)
+          .then(() => {
+            setModeAdmin(true);
+            alert('🔓 Menu Data diaktifkan (tombol 💾 kini tampil) — tersimpan, tetap mode admin walau reload, sampai logout/diubah manual lagi.');
+          })
+          .catch((err) => {
+            alert('Gagal login: ' + (err && err.message ? err.message : err));
+          });
       }
     }
     function setModeAdmin(aktif) {
