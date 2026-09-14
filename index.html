@@ -4678,7 +4678,7 @@ function gotoHalamanTerakhir() {
     }
 
     function updateLabelModeBaca() {
-      const teks = modeBacaanAktif ? '📚 Menu Kajian' : '📖 Ke Mode Bacaan';
+      const teks = modeBacaanAktif ? '📚 Menu Kajian' : '📖 Menu Bacaan';
       const btn = document.getElementById('btnModeBaca');
       const btnF = document.getElementById('btnModeBacaFloat');
       if (btn) btn.textContent = teks;
@@ -5372,17 +5372,8 @@ function tambahHalamanDaftarKode(data = {}) {
     }
 
     function tampilkanTombolKembali() {
-      if (!document.body.classList.contains('mode-admin')) return; // hanya relevan utk admin (jalur edit); mode user selalu read-only, jangan pernah muncul
-      let btn = document.getElementById('btnKembaliHasil');
-      if (!btn) {
-        btn = document.createElement('button');
-        btn.id = 'btnKembaliHasil';
-        btn.textContent = '↩ Kembali ke Hasil';
-        btn.style.cssText = 'background:#c9a84c;color:#fff;border:1px solid #7a5a20;border-radius:12px;padding:0 5px;height:24px;font-size:8px;font-weight:bold;box-shadow:0 2px 8px rgba(0,0,0,0.25);cursor:pointer;pointer-events:auto;white-space:nowrap;';
-        btn.onclick = kembaliKeHasil;
-        document.querySelector('.float-left').appendChild(btn);
-      }
-      btn.style.display = 'block';
+      // Sudah tidak dipakai lagi sejak editing pindah ke model popup — dimatikan sepenuhnya (2026-09-14), baik mode admin maupun user.
+      return;
     }
 
     function kembaliKeHasil() {
