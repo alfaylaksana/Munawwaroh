@@ -1111,6 +1111,7 @@ body.mode-html-aktif .hasil-kotak {
 }
     .hasil-kotak.mode-html .hasil-aliran {
   column-gap: 1px;
+  justify-content: space-between;
 }
 .hasil-kotak.mode-html .kata-blok {
   padding-right: 1px;
@@ -7495,6 +7496,17 @@ html += `</div>`;
     function init() {
       initModeAdmin();
       updateLabelModeBaca();
+      // Default tiap load: hanya harakat lengkap yg tampil — Pegon, makna Indo (nempel di flag pegonTersembunyi yg sama), dan Kode disembunyikan (2026-09-14)
+      pegonTersembunyi = true;
+      kodeTersembunyi = true;
+      const togPegon = document.getElementById('togPegon');
+      if (togPegon) { togPegon.textContent = 'Tampilkan Pegon'; togPegon.classList.add('aktif'); }
+      const togPegonFloat = document.getElementById('togPegonFloat');
+      if (togPegonFloat) { togPegonFloat.textContent = 'Tampilkan Pegon'; togPegonFloat.classList.add('aktif'); }
+      const togKode = document.getElementById('togKode');
+      if (togKode) { togKode.textContent = 'Tampilkan Kode'; togKode.classList.add('aktif'); }
+      const togKodeFloat = document.getElementById('togKodeFloat');
+      if (togKodeFloat) { togKodeFloat.textContent = 'Tampilkan Kode'; togKodeFloat.classList.add('aktif'); }
       Promise.allSettled([muat(), muatDataUthmani()]).then(([hasilMuat]) => {
         const berhasil = hasilMuat.status === 'fulfilled' ? hasilMuat.value : false;
         if (!berhasil) {
