@@ -3241,7 +3241,7 @@ body.mode-html-aktif .hasil-kotak {
           <button class="btn-skala aktif-skala" id="dropBtnB" onclick="setSkala(1,'B');tutupDropdown()">B</button>
         </div>
         <div class="dropdown-divider"></div>
-        <button class="drop-item" id="btnModeBaca" onclick="toggleModeBaca();tutupDropdown()" style="font-weight:bold;color:#7a5a20;">📚 Ke Mode Kajian</button>
+        <button class="drop-item" id="btnModeBaca" onclick="toggleModeBaca();tutupDropdown()" style="font-weight:bold;color:#7a5a20;">📚 Menu Kajian</button>
         <div class="dropdown-divider"></div>
         <button class="drop-item aktif" id="togPegon" onclick="togglePegon();tutupDropdown()">Tampilkan Pegon</button>
         <button class="drop-item aktif" id="togKode" onclick="toggleKode();tutupDropdown()">Tampilkan Kode</button>
@@ -3316,7 +3316,7 @@ body.mode-html-aktif .hasil-kotak {
           <button class="float-drop-item" onclick="setHarakat('irab');tutupFloatDropdown()">I'rab saja</button>
           <button class="float-drop-item" onclick="setHarakat('tanpa');tutupFloatDropdown()">Tanpa harakat</button>
           <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
-          <button class="float-drop-item" id="btnModeBacaFloat" onclick="toggleModeBaca();tutupFloatDropdown()" style="font-weight:bold;color:#7a5a20;">📚 Ke Mode Kajian</button>
+          <button class="float-drop-item" id="btnModeBacaFloat" onclick="toggleModeBaca();tutupFloatDropdown()" style="font-weight:bold;color:#7a5a20;">📚 Menu Kajian</button>
           <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
           <button class="float-drop-item" id="togPegonFloat" onclick="togglePegon();tutupFloatDropdown()">Tampilkan Pegon</button>
           <button class="float-drop-item" id="togKodeFloat" onclick="toggleKode();tutupFloatDropdown()">Tampilkan Kode</button>
@@ -3574,7 +3574,7 @@ body.mode-html-aktif .hasil-kotak {
       })));
     }
 
-    let modeBacaanAktif = true; // layout mengalir ala mushaf; terpisah dari toggle Pegon/Kode di atas, supaya keduanya bisa dicoba tampil bareng
+    let modeBacaanAktif = (() => { try { const v = localStorage.getItem('modeBacaanAktif'); return v === null ? true : v === '1'; } catch (e) { return true; } })(); // diingat lintas sesi (localStorage); default Mode Bacaan kalau belum pernah diset. layout mengalir ala mushaf; terpisah dari toggle Pegon/Kode di atas, supaya keduanya bisa dicoba tampil bareng
     // Popup edit inline (klik kata di halaman Hasil) — sengaja dipisah dari
     // mode-admin (yg mengatur tampil/sembunyi halaman Input & toolbar
     // maintenance), krn ini yg dipakai utk edit sehari-hari dan harus tetap
@@ -4672,12 +4672,13 @@ function gotoHalamanTerakhir() {
 
     function toggleModeBaca() {
       modeBacaanAktif = !modeBacaanAktif;
+      try { localStorage.setItem('modeBacaanAktif', modeBacaanAktif ? '1' : '0'); } catch (e) {}
       updateLabelModeBaca();
       tampilkan();
     }
 
     function updateLabelModeBaca() {
-      const teks = modeBacaanAktif ? '📚 Ke Mode Kajian' : '📖 Ke Mode Bacaan';
+      const teks = modeBacaanAktif ? '📚 Menu Kajian' : '📖 Ke Mode Bacaan';
       const btn = document.getElementById('btnModeBaca');
       const btnF = document.getElementById('btnModeBacaFloat');
       if (btn) btn.textContent = teks;
@@ -5371,6 +5372,7 @@ function tambahHalamanDaftarKode(data = {}) {
     }
 
     function tampilkanTombolKembali() {
+      if (!document.body.classList.contains('mode-admin')) return; // hanya relevan utk admin (jalur edit); mode user selalu read-only, jangan pernah muncul
       let btn = document.getElementById('btnKembaliHasil');
       if (!btn) {
         btn = document.createElement('button');
@@ -6630,7 +6632,7 @@ document.querySelectorAll('.halaman-input').forEach((hal, hIdx) => {
                   } else {
                     rujukanRowHtml = `<div class="rujukan-kosong"></div>`;
                   }
-                  html += `<div class="syiir-kata-blok" onclick="if (!modeBacaanAktif) { if(!event.target.closest('.pegon')) lompatKeInput('${item.id}'); } else if (document.body.classList.contains('mode-admin')) { bukaEditPegonInline(event,'${item.id}'); } else { bukaKartuBaca(event,'${item.id}'); }" style="cursor:pointer;">
+                  html += `<div class="syiir-kata-blok" onclick="if (!document.body.classList.contains('mode-admin')) { bukaKartuBaca(event,'${item.id}'); } else if (!modeBacaanAktif) { if(!event.target.closest('.pegon')) lompatKeInput('${item.id}'); } else { bukaEditPegonInline(event,'${item.id}'); }" style="cursor:pointer;">
                     ${kodeHtml}
                     <span class="arab" data-asli="${arab}">${arabTampil}</span>
                     <div class="bawah-kata">
@@ -6714,7 +6716,7 @@ if(arab)kataList.push({kode,arab,maknaIndo,maknaJawa,nomor,krKanan,paksaBaris,be
             const nomorHtml = item.nomor ? `<div class="nomor-ayat" onclick="event.stopPropagation(); togglePopupTerjemahan(this, '${kunciTerjemah(nomorSurahGrid, item.nomor)}')">${item.nomor}</div>` : '';
             const geser = item.geserPegon ? parseInt(item.geserPegon) : 0;
             const geserStyle = geser ? `style="margin-right:${geser}px;"` : '';
-            html += `<div class="kata-blok ${zebra}${item.nomor?' ada-nomor ujung-ayat':''}${item.belumAdaArti?' belum-ada-arti':''}" onclick="if (!modeBacaanAktif) { if(!event.target.closest('.pegon')) lompatKeInput('${item.srcId}'); } else if (document.body.classList.contains('mode-admin')) { bukaEditPegonInline(event,'${item.srcId}'); } else { bukaKartuBaca(event,'${item.srcId}'); }" style="cursor:pointer;" title="${item.belumAdaArti?'Belum ada terjemahan':''}">
+            html += `<div class="kata-blok ${zebra}${item.nomor?' ada-nomor ujung-ayat':''}${item.belumAdaArti?' belum-ada-arti':''}" onclick="if (!document.body.classList.contains('mode-admin')) { bukaKartuBaca(event,'${item.srcId}'); } else if (!modeBacaanAktif) { if(!event.target.closest('.pegon')) lompatKeInput('${item.srcId}'); } else { bukaEditPegonInline(event,'${item.srcId}'); }" style="cursor:pointer;" title="${item.belumAdaArti?'Belum ada terjemahan':''}">
             ${kodeHtml}
             <span class="arab" data-asli="${item.arab}">${arabTampil}</span>
             <div class="bawah-kata">
@@ -7501,6 +7503,7 @@ html += `</div>`;
     }
     function init() {
       initModeAdmin();
+      updateLabelModeBaca();
       Promise.allSettled([muat(), muatDataUthmani()]).then(([hasilMuat]) => {
         const berhasil = hasilMuat.status === 'fulfilled' ? hasilMuat.value : false;
         if (!berhasil) {
