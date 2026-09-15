@@ -2075,7 +2075,8 @@ body.mode-html-aktif .hasil-kotak {
       position: relative;
       z-index: 1;
       transition: opacity 0.2s;
-      word-break: break-word;
+      word-break: normal;
+      overflow-wrap: break-word;
       margin-top: 2px;
     }
 
@@ -4040,7 +4041,13 @@ function togglePopupTerjemahan(el, nomorAyat) {
     const fontSizePx = parseFloat(getComputedStyle(elReferensi).fontSize) || 13;
     const perkiraanLebarPerHuruf = fontSizePx * 0.55; // kasar, utk font Georgia serif — mgkn perlu dikalibrasi ulang stlh dilihat hasilnya
     const targetBaris = 2; // idealnya Pegon/Indo wrap maksimal ~2 baris
-    return (teks.length * perkiraanLebarPerHuruf) / targetBaris;
+    const lebarBerdasarTotal = (teks.length * perkiraanLebarPerHuruf) / targetBaris;
+    // Lantai tambahan: lebar kata TERPANJANG dlm teks ini (utuh, blm dipotong spasi),
+    // supaya box gak pernah lebih sempit dari 1 kata manapun — mencegah word-break
+    // di tengah kata spt "Allah" -> "Alla"+"h" (lihat jg fix CSS word-break di .pegon).
+    const kataTerpanjang = teks.split(/\s+/).reduce((a, b) => b.length > a.length ? b : a, '');
+    const lebarKataTerpanjang = kataTerpanjang.length * perkiraanLebarPerHuruf;
+    return Math.max(lebarBerdasarTotal, lebarKataTerpanjang);
   }
 
   // Proses syiir-blok (sekarang di dalam hasil-halaman)
