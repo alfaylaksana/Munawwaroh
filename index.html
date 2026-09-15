@@ -3623,10 +3623,18 @@ function terapkanPengaliOverride(halamanInputEl, teksArabBersih, pengaliBaru) {
     const field = halamanInputEl.querySelector(sel);
     if (!field) return;
     const map = parseOverridePengali(field.value || '');
+    // Cari key yg SUDAH ADA & match teksArabBersih (logika sama spt cariPengaliAktif/pembacaan tampilan —
+    // substring, bukan exact) — kalau ketemu, timpa key itu; jangan selalu nambah key baru persis
+    // teksArabBersih, krn kalau ada key lama yg lebih dulu match, key lama itu yg kebaca duluan
+    // dan edit baru jadi seolah tidak berubah di tampilan.
+    let keyTerpakai = teksArabBersih;
+    for (const k of Object.keys(map)) {
+      if (teksArabBersih.includes(k)) { keyTerpakai = k; break; }
+    }
     if (pengaliBaru === null || isNaN(pengaliBaru)) {
-      delete map[teksArabBersih];
+      delete map[keyTerpakai];
     } else {
-      map[teksArabBersih] = pengaliBaru;
+      map[keyTerpakai] = pengaliBaru;
     }
     field.value = Object.entries(map).map(([k, v]) => `${k}:${v}`).join(', ');
   });
@@ -3969,32 +3977,15 @@ function togglePopupTerjemahan(el, nomorAyat) {
           const cls = kataLuar ? 'baca-kata' : 'baca-kata baca-fallback';
           const titleAttr = kataLuar ? '' : ' title="Teks dari input sendiri (belum tersedia/tersinkron dari sumber Utsmani luar)"';
 
-          // Kode gramatikal (pakai class yg sama dgn grid, jadi ikut toggleKode())
-          // — di-skip generate sama sekali kalau sedang tersembunyi, biar tdk
-          // ikut mengganggu line-height/perataan teks yg mengalir.
-          let kodeHtml = '';
-          if (!kodeTersembunyi) {
-            const { gramatikal } = parseKode(item.kode || '');
-            kodeHtml = gramatikal.length === 0 ? '' :
-              `<div class="kode-wrapper">${gramatikal.map(k => {
-                if (!k) return '';
-                if (k === '...') return `<div class="kode-gramatikal murojaah">...</div>`;
-                const kcls = DIUCAPKAN.includes(k) ? 'diucapkan' : 'tidakdiucapkan';
-                return `<div class="kode-gramatikal ${kcls}">${k}</div>`;
-              }).join('')}</div>`;
-          }
-
-          // Pegon indo/jawa (pakai class yg sama dgn grid, jadi ikut togglePegon())
-          // — sama, di-skip generate kalau sedang tersembunyi.
-          let pegonHtml = '';
-          if (!pegonTersembunyi) {
-            const maknaIndo = item.maknaIndo || '';
-            const maknaJawa = item.maknaJawa || '';
-            pegonHtml = (maknaIndo || maknaJawa) ? `<div class="bawah-kata">
-                <span class="pegon jawa" data-indo="${maknaIndo}" data-jawa="${maknaJawa}">${maknaJawa || maknaIndo}</span>
-                <span class="pegon indo" data-indo="${maknaIndo}" data-jawa="${maknaJawa}">${maknaIndo || maknaJawa}</span>
-              </div>` : '';
-          }
+          // Kode gramatikal & Pegon/Indo SENGAJA TIDAK PERNAH ditampilkan inline di
+          // Mode Bacaan (2026-09-15) — filosofi Mode Bacaan: minimalis, Arab+harakat
+          // saja, detail lengkap lewat popup kartu-baca (tap kata). Dulu ikut
+          // pegonTersembunyi/kodeTersembunyi (flag yg sama dipakai Mode Kajian),
+          // makanya waktu default Kajian diubah jadi "tampilkan semua", Mode Bacaan
+          // ikut kebawa nampilin semua juga — sekarang dipisah, toggle Pegon/Kode di
+          // menu mata murni utk Mode Kajian.
+          const kodeHtml = '';
+          const pegonHtml = '';
 
           html += `<span class="baca-kata-unit">${kodeHtml}<span class="${cls}" onclick="${klikKata(item.srcId)}"${titleAttr}>${teksTampil}</span>${pegonHtml}</span> `;
         });
