@@ -4036,17 +4036,26 @@ function togglePopupTerjemahan(el, nomorAyat) {
     return map;
   }
 
+  let _canvasUkurTeks = null;
+  function ukurLebarTeksPx(teks, fontCss) {
+    if (!_canvasUkurTeks) _canvasUkurTeks = document.createElement('canvas');
+    const ctx = _canvasUkurTeks.getContext('2d');
+    ctx.font = fontCss;
+    return ctx.measureText(teks).width;
+  }
+
   function lebarOtomatisDariTeks(teks, elReferensi) {
     if (!teks) return null;
-    const fontSizePx = parseFloat(getComputedStyle(elReferensi).fontSize) || 13;
-    const perkiraanLebarPerHuruf = fontSizePx * 0.55; // kasar, utk font Georgia serif — mgkn perlu dikalibrasi ulang stlh dilihat hasilnya
+    const cs = getComputedStyle(elReferensi);
+    const fontCss = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
     const targetBaris = 2; // idealnya Pegon/Indo wrap maksimal ~2 baris
-    const lebarBerdasarTotal = (teks.length * perkiraanLebarPerHuruf) / targetBaris;
-    // Lantai tambahan: lebar kata TERPANJANG dlm teks ini (utuh, blm dipotong spasi),
-    // supaya box gak pernah lebih sempit dari 1 kata manapun — mencegah word-break
-    // di tengah kata spt "Allah" -> "Alla"+"h" (lihat jg fix CSS word-break di .pegon).
+    const lebarSatuBarisPenuh = ukurLebarTeksPx(teks, fontCss);
+    const lebarBerdasarTotal = lebarSatuBarisPenuh / targetBaris;
+    // Lantai tambahan: lebar kata TERPANJANG dlm teks ini (diukur beneran, bkn ditaksir),
+    // + buffer kecil, supaya box gak pernah lebih sempit dari 1 kata manapun — mencegah
+    // word-break di tengah kata spt "Allah" -> "Alla"+"h" (lihat jg fix CSS word-break di .pegon).
     const kataTerpanjang = teks.split(/\s+/).reduce((a, b) => b.length > a.length ? b : a, '');
-    const lebarKataTerpanjang = kataTerpanjang.length * perkiraanLebarPerHuruf;
+    const lebarKataTerpanjang = ukurLebarTeksPx(kataTerpanjang, fontCss) + 4;
     return Math.max(lebarBerdasarTotal, lebarKataTerpanjang);
   }
 
