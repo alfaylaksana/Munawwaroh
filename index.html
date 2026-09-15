@@ -3838,6 +3838,7 @@ function simpanEditPegonInline(srcId) {
   const posisiScroll = window.scrollY;
   simpan();
   tampilkan();
+  sesuaikanLebarPegon();
   requestAnimationFrame(() => window.scrollTo({ top: posisiScroll }));
 }
 
