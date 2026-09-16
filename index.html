@@ -4141,7 +4141,7 @@ function togglePopupTerjemahan(el, nomorAyat) {
         } else {
           const lebarOtomatis = lebarOtomatisDariTeks(pegonIndo.textContent.trim(), pegonIndo);
           const lebarFinal = lebarOtomatis !== null
-            ? Math.max(lebarArab * 1.0, Math.min(lebarOtomatis, lebarArab * 3.2), lantaiAman)
+            ? Math.max(lebarArab * 1.0, Math.min(lebarOtomatis, Math.max(lebarArab * 3.2, 130)), lantaiAman)
             : Math.max(lebarArab * pengaliDefaultBlok, lantaiAman);
           pegonIndo.style.maxWidth = lebarFinal + 'px';
         }
@@ -4158,7 +4158,7 @@ function togglePopupTerjemahan(el, nomorAyat) {
         } else {
           const lebarOtomatis = lebarOtomatisDariTeks(pegonJawa.textContent.trim(), pegonJawa);
           const lebarFinal = lebarOtomatis !== null
-            ? Math.max(lebarArab * 1.0, Math.min(lebarOtomatis, lebarArab * 3.2), lantaiAman)
+            ? Math.max(lebarArab * 1.0, Math.min(lebarOtomatis, Math.max(lebarArab * 3.2, 130)), lantaiAman)
             : Math.max(lebarArab * pengaliDefaultBlok, lantaiAman);
           pegonJawa.style.maxWidth = lebarFinal + 'px';
         }
@@ -6859,7 +6859,15 @@ html += `</div>`;
       });
       gabungkanHalamanMushafBacaan();
       setTimeout(() => sembunyikanBorderUjung(), 100);
-      setTimeout(() => sesuaikanLebarPegon(), 800);
+      // sesuaikanLebarPegon() HARUS nunggu font benar2 siap dulu (sama alasannya
+      // spt basmalah di atas) — kalau pakai setTimeout tetap (dulu 800ms), user
+      // sempat lihat tampilan "versi awal" (lebar box blm dihitung) sebentar,
+      // baru berubah/menyempit begitu JS jalan — keliatan spt render 2x.
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => requestAnimationFrame(() => requestAnimationFrame(sesuaikanLebarPegon)));
+      } else {
+        setTimeout(() => sesuaikanLebarPegon(), 300);
+      }
 
       setTimeout(() => terapkanOverrideBaris(), 80);
       setTimeout(() => {
