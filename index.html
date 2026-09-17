@@ -3610,34 +3610,68 @@ function parseOverridePengali(nilaiField) {
   return map;
 }
 
-function cariPengaliAktif(halamanInputEl, teksArabBersih) {
+// Ustaz sering punya kata yg SAMA PERSIS muncul >1x dlm 1 halaman, tp tiap
+// kemunculan butuh pengali beda2 (kondisi baris di sekitarnya beda). Dua
+// fungsi ini bikin kunci override per-KEMUNCULAN (bkn per-teks doang), spy
+// override 1 kemunculan gak ikut nimpa kemunculan lain dr kata yg sama.
+// kunci: "<teksArabBersih>" kalau cuma muncul 1x (spt sblmnya, kompatibel
+// dgn data lama), atau "<teksArabBersih>#<ke-berapa>" kalau muncul >1x.
+function hitungPetaOkurensi(daftarTeks) {
+  const totalPerTeks = {};
+  daftarTeks.forEach(t => { totalPerTeks[t] = (totalPerTeks[t] || 0) + 1; });
+  const counter = {};
+  return daftarTeks.map(t => {
+    counter[t] = (counter[t] || 0) + 1;
+    return { teks: t, ke: counter[t], total: totalPerTeks[t] };
+  });
+}
+function kunciOverride(teks, ke, total) {
+  return total > 1 ? `${teks}#${ke}` : teks;
+}
+function cariNilaiOverride(map, teksArabBersih, kunciSpesifik) {
+  if (kunciSpesifik && map.hasOwnProperty(kunciSpesifik)) return map[kunciSpesifik];
+  if (map.hasOwnProperty(teksArabBersih)) return map[teksArabBersih];
+  return null;
+}
+// Hitung kemunculan ke-berapa & total kemunculan `row` (baris admin) di antara
+// SEMUA baris se-halaman yg py teks arab (tanpa harakat) sama — dipakai saat
+// buka/simpan popup edit kata, spy kuncinya konsisten dgn yg dipakai sesuaikanLebarPegon().
+function hitungOkurensiBaris(halamanInputEl, row, teksArabBersih) {
+  if (!halamanInputEl || !row) return { ke: 1, total: 1 };
+  const semuaBaris = Array.from(halamanInputEl.querySelectorAll('tr')).filter(tr => tr.querySelector('.arab-input, .s-arab'));
+  let ke = 0, total = 0;
+  semuaBaris.forEach(tr => {
+    const inp = tr.querySelector('.arab-input') || tr.querySelector('.s-arab');
+    const teks = (inp?.value || '').replace(/[\u064B-\u065F]/g, '').trim();
+    if (teks === teksArabBersih) {
+      total++;
+      if (tr === row) ke = total;
+    }
+  });
+  return { ke: ke || total || 1, total: total || 1 };
+}
+
+function cariPengaliAktif(halamanInputEl, teksArabBersih, row) {
   if (!halamanInputEl || !teksArabBersih) return null;
   const inputIndo = halamanInputEl.querySelector('.input-override-pegon-indo');
   const map = parseOverridePengali(inputIndo?.value || '');
-  for (const [key, val] of Object.entries(map)) {
-    if (teksArabBersih.includes(key)) return val;
-  }
-  return null;
+  const { ke, total } = hitungOkurensiBaris(halamanInputEl, row, teksArabBersih);
+  const kunciSpesifik = kunciOverride(teksArabBersih, ke, total);
+  return cariNilaiOverride(map, teksArabBersih, kunciSpesifik);
 }
 
-function terapkanPengaliOverride(halamanInputEl, teksArabBersih, pengaliBaru) {
+function terapkanPengaliOverride(halamanInputEl, teksArabBersih, pengaliBaru, row) {
   if (!halamanInputEl || !teksArabBersih) return;
+  const { ke, total } = hitungOkurensiBaris(halamanInputEl, row, teksArabBersih);
+  const kunciTarget = kunciOverride(teksArabBersih, ke, total);
   ['.input-override-pegon-indo', '.input-override-pegon-jawa'].forEach(sel => {
     const field = halamanInputEl.querySelector(sel);
     if (!field) return;
     const map = parseOverridePengali(field.value || '');
-    // Cari key yg SUDAH ADA & match teksArabBersih (logika sama spt cariPengaliAktif/pembacaan tampilan —
-    // substring, bukan exact) — kalau ketemu, timpa key itu; jangan selalu nambah key baru persis
-    // teksArabBersih, krn kalau ada key lama yg lebih dulu match, key lama itu yg kebaca duluan
-    // dan edit baru jadi seolah tidak berubah di tampilan.
-    let keyTerpakai = teksArabBersih;
-    for (const k of Object.keys(map)) {
-      if (teksArabBersih.includes(k)) { keyTerpakai = k; break; }
-    }
     if (pengaliBaru === null || isNaN(pengaliBaru)) {
-      delete map[keyTerpakai];
+      delete map[kunciTarget];
     } else {
-      map[keyTerpakai] = pengaliBaru;
+      map[kunciTarget] = pengaliBaru;
     }
     field.value = Object.entries(map).map(([k, v]) => `${k}:${v}`).join(', ');
   });
@@ -3749,7 +3783,7 @@ function bukaEditPegonInline(event, srcId) {
 
   const halamanInputEl = row.closest('.halaman-input');
   const teksArabBersih = (inputArab?.value || '').replace(/[\u064B-\u065F]/g, '').trim();
-  const pengaliAktif = cariPengaliAktif(halamanInputEl, teksArabBersih);
+  const pengaliAktif = cariPengaliAktif(halamanInputEl, teksArabBersih, row);
   const catatanAda = (inputCatatan?.value || '').trim();
 
   const el = event.currentTarget;
@@ -3843,7 +3877,7 @@ function simpanEditPegonInline(srcId) {
   const halamanInputEl = row.closest('.halaman-input');
   const teksArabBersih = (inputArab?.value || '').replace(/[\u064B-\u065F]/g, '').trim();
   const pengaliBaru = nilaiPengaliStr.trim() === '' ? null : parseFloat(nilaiPengaliStr.trim().replace(',', '.'));
-  terapkanPengaliOverride(halamanInputEl, teksArabBersih, pengaliBaru);
+  terapkanPengaliOverride(halamanInputEl, teksArabBersih, pengaliBaru, row);
 
   tutupPopupEditPegon();
   const posisiScroll = window.scrollY;
@@ -4123,26 +4157,24 @@ function togglePopupTerjemahan(el, nomorAyat) {
     const inputJawa = document.querySelector(`#halaman-${halId} .input-override-pegon-jawa`);
     const overrideIndo = buatMap(inputIndo);
     const overrideJawa = buatMap(inputJawa);
-    syiirEl.querySelectorAll('.syiir-kata-blok').forEach(blok => {
+    const semuaBlokSyiir = Array.from(syiirEl.querySelectorAll('.syiir-kata-blok'));
+    const petaOkurensiSyiir = hitungPetaOkurensi(semuaBlokSyiir.map(b => (b.querySelector('.arab')?.textContent || '').trim().replace(/[\u064B-\u065F]/g, '')));
+    semuaBlokSyiir.forEach((blok, idxBlok) => {
       const arab = blok.querySelector('.arab');
       if (!arab) return;
       const lebarArab = arab.getBoundingClientRect().width || arab.offsetWidth || 60;
       const teksArab = arab.textContent.trim().replace(/[\u064B-\u065F]/g, '');
+      const { ke: keSyiir, total: totalSyiir } = petaOkurensiSyiir[idxBlok];
+      const kunciSpesifikSyiir = kunciOverride(teksArab, keSyiir, totalSyiir);
       const pegonIndo = blok.querySelector('.pegon.indo');
       const pegonJawa = blok.querySelector('.pegon.jawa');
       if (pegonIndo) {
-        let pengali = null;
-        for (const [key, val] of Object.entries(overrideIndo)) {
-          if (teksArab.includes(key)) { pengali = val; break; }
-        }
+        const pengali = cariNilaiOverride(overrideIndo, teksArab, kunciSpesifikSyiir);
         if (pengali !== null) pegonIndo.style.maxWidth = (lebarArab * pengali) + 'px';
         else pegonIndo.style.maxWidth = '';
       }
       if (pegonJawa) {
-        let pengali = null;
-        for (const [key, val] of Object.entries(overrideJawa)) {
-          if (teksArab.includes(key)) { pengali = val; break; }
-        }
+        const pengali = cariNilaiOverride(overrideJawa, teksArab, kunciSpesifikSyiir);
         if (pengali !== null) pegonJawa.style.maxWidth = (lebarArab * pengali) + 'px';
         else pegonJawa.style.maxWidth = '';
       }
@@ -4168,11 +4200,15 @@ function togglePopupTerjemahan(el, nomorAyat) {
       });
     }
 
-    halEl.querySelectorAll('.kata-blok').forEach(blok => {
+    const semuaBlokHalIni = Array.from(halEl.querySelectorAll('.kata-blok'));
+    const petaOkurensiHal = hitungPetaOkurensi(semuaBlokHalIni.map(b => (b.querySelector('.arab')?.textContent || '').trim().replace(/[\u064B-\u065F]/g, '')));
+    semuaBlokHalIni.forEach((blok, idxBlokHal) => {
       const arab = blok.querySelector('.arab');
       if (!arab) return;
       const lebarArab = arab.getBoundingClientRect().width || arab.offsetWidth || 60;
       const teksArab = arab.textContent.trim().replace(/[\u064B-\u065F]/g, '');
+      const { ke: keHal, total: totalHal } = petaOkurensiHal[idxBlokHal];
+      const kunciSpesifikHal = kunciOverride(teksArab, keHal, totalHal);
       const pegonIndo = blok.querySelector('.pegon.indo');
       const pegonJawa = blok.querySelector('.pegon.jawa');
       const aliranIndukBlok = blok.closest('.hasil-aliran');
@@ -4184,10 +4220,7 @@ function togglePopupTerjemahan(el, nomorAyat) {
         const teksIndoAsli = pegonIndo.dataset.indo || pegonIndo.textContent.trim();
         const teksIndoPenggal = sisipkanPemenggalSukuKata(teksIndoAsli);
         if (pegonIndo.textContent !== teksIndoPenggal) pegonIndo.textContent = teksIndoPenggal;
-        let pengali = null;
-        for (const [key, val] of Object.entries(overrideIndo)) {
-          if (teksArab.includes(key)) { pengali = val; break; }
-        }
+        const pengali = cariNilaiOverride(overrideIndo, teksArab, kunciSpesifikHal);
         // Catatan: TANPA lantaiAman di sini — skrg kata Indo aman dipenggal pakai
         // tanda hubung (lihat sisipkanPemenggalSukuKata di atas), jadi box gak perlu
         // dipaksa lebar lagi cuma demi menghindari kata terpotong.
@@ -4205,10 +4238,7 @@ function togglePopupTerjemahan(el, nomorAyat) {
       if (pegonJawa) {
         // Pegon Jawa (aksara Arab) blm ada skema pemenggalan suku kata — tetap
         // pertahankan lantai anti-penggalan spy tdk terpotong di tengah kata.
-        let pengali = null;
-        for (const [key, val] of Object.entries(overrideJawa)) {
-          if (teksArab.includes(key)) { pengali = val; break; }
-        }
+        const pengali = cariNilaiOverride(overrideJawa, teksArab, kunciSpesifikHal);
         const lantaiAman = lebarMinimalAmanKata(pegonJawa.textContent.trim(), pegonJawa);
         if (pengali !== null) {
           lebarFinalJawa = Math.max(lebarArab * pengali, lantaiAman);
