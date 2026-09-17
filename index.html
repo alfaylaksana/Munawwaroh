@@ -4179,6 +4179,7 @@ function togglePopupTerjemahan(el, nomorAyat) {
       const idxAliranBlok = aliranIndukBlok ? Array.from(aliranListHal).indexOf(aliranIndukBlok) : -1;
       const pengaliDefaultBlok = pengaliDefaultPerAliran.hasOwnProperty(idxAliranBlok) ? pengaliDefaultPerAliran[idxAliranBlok] : 1.3;
 
+      let lebarFinalIndo = null;
       if (pegonIndo) {
         const teksIndoAsli = pegonIndo.dataset.indo || pegonIndo.textContent.trim();
         const teksIndoPenggal = sisipkanPemenggalSukuKata(teksIndoAsli);
@@ -4191,16 +4192,16 @@ function togglePopupTerjemahan(el, nomorAyat) {
         // tanda hubung (lihat sisipkanPemenggalSukuKata di atas), jadi box gak perlu
         // dipaksa lebar lagi cuma demi menghindari kata terpotong.
         if (pengali !== null) {
-          pegonIndo.style.maxWidth = (lebarArab * pengali) + 'px';
+          lebarFinalIndo = lebarArab * pengali;
         } else {
           const lebarOtomatis = lebarOtomatisDariTeks(teksIndoAsli, pegonIndo);
-          const lebarFinal = lebarOtomatis !== null
+          lebarFinalIndo = lebarOtomatis !== null
             ? Math.max(lebarArab * 1.0, Math.min(lebarOtomatis, Math.max(lebarArab * 3.2, 130)))
             : (lebarArab * pengaliDefaultBlok);
-          pegonIndo.style.maxWidth = lebarFinal + 'px';
         }
       }
 
+      let lebarFinalJawa = null;
       if (pegonJawa) {
         // Pegon Jawa (aksara Arab) blm ada skema pemenggalan suku kata — tetap
         // pertahankan lantai anti-penggalan spy tdk terpotong di tengah kata.
@@ -4210,15 +4211,21 @@ function togglePopupTerjemahan(el, nomorAyat) {
         }
         const lantaiAman = lebarMinimalAmanKata(pegonJawa.textContent.trim(), pegonJawa);
         if (pengali !== null) {
-          pegonJawa.style.maxWidth = Math.max(lebarArab * pengali, lantaiAman) + 'px';
+          lebarFinalJawa = Math.max(lebarArab * pengali, lantaiAman);
         } else {
           const lebarOtomatis = lebarOtomatisDariTeks(pegonJawa.textContent.trim(), pegonJawa);
-          const lebarFinal = lebarOtomatis !== null
+          lebarFinalJawa = lebarOtomatis !== null
             ? Math.max(lebarArab * 1.0, Math.min(lebarOtomatis, Math.max(lebarArab * 3.2, 130)), lantaiAman)
             : Math.max(lebarArab * pengaliDefaultBlok, lantaiAman);
-          pegonJawa.style.maxWidth = lebarFinal + 'px';
         }
       }
+
+      // Samakan lebar Pegon Jawa & Makna Indo (pakai yg lebih lebar utk keduanya),
+      // supaya 2 box yg stacked di bawah 1 kata Arab yg sama selalu serasi —
+      // sebelumnya dihitung independen, jadi bisa beda lebar & keliatan njomplang.
+      const lebarSerasi = Math.max(lebarFinalIndo || 0, lebarFinalJawa || 0) || null;
+      if (pegonIndo && lebarSerasi !== null) pegonIndo.style.maxWidth = lebarSerasi + 'px';
+      if (pegonJawa && lebarSerasi !== null) pegonJawa.style.maxWidth = lebarSerasi + 'px';
     });
   });
 }
