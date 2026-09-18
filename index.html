@@ -6875,9 +6875,22 @@ if(arab)kataList.push({kode,arab,maknaIndo,maknaJawa,nomor,krKanan,paksaBaris,be
               if (normalisasiUntukCocokkan(gabunganGrid) === BASMALAH_NORMAL) { gBasmalahEnd = n; break; }
             }
           }
+          // Kalimat penutup non-ayat di ujung bab (mis. "صدق الله العظيم" di akhir
+          // An-Nas) — kataList berekor beberapa item TANPA nomor ayat sama sekali.
+          // Sama spt Basmalah, taruh di .hasil-aliran tersendiri spy gak numpuk
+          // sebaris dgn ayat terakhir (baik krn ruang kosong maupun krn reflow zoom).
+          let gPenutupStart = -1;
+          {
+            let i = kataList.length - 1, hitungNoNomor = 0;
+            while (i >= 0 && !kataList[i].nomor) { hitungNoNomor++; i--; }
+            if (hitungNoNomor > 0 && i >= 0) gPenutupStart = kataList.length - hitungNoNomor;
+          }
           html += `<div class="hasil-aliran">`;
           kataList.forEach((item, index) => {
             if (gBasmalahEnd > 0 && index === gBasmalahEnd) {
+              html += `</div><div class="hasil-aliran">`;
+            }
+            if (gPenutupStart > 0 && index === gPenutupStart) {
               html += `</div><div class="hasil-aliran">`;
             }
             const {
