@@ -1110,7 +1110,7 @@ body.mode-html-aktif .hasil-kotak {
   font-size: clamp(20px, 7vw, 35px);
 }
     .hasil-kotak.mode-html .hasil-aliran {
-  column-gap: 1px;
+  column-gap: 6px;
   justify-content: space-between;
   row-gap: calc(10px * var(--fs));
 }
@@ -6813,8 +6813,25 @@ if(arab)kataList.push({kode,arab,maknaIndo,maknaJawa,nomor,krKanan,paksaBaris,be
             html += `</div>`;
             return;
           }
+          // Basmalah di awal surah: kalau kataList diawali frasa yg gabungannya
+          // cocok lafal Basmalah, taruh di .hasil-aliran TERPISAH dari ayat 1 dst
+          // (bukan cuma "keliatan" terpisah krn ruang kosong) — supaya kalau
+          // ukuran teks diperbesar/di-zoom sampai kata terakhir Basmalah turun
+          // baris, dia tetap gak numpuk campur sama ayat 1. Logika deteksi sama
+          // persis dgn versi Mode Bacaan (BASMALAH_NORMAL) di atas.
+          let gBasmalahEnd = 0;
+          {
+            const batasCekGrid = Math.min(kataList.length - 1, 4);
+            for (let n = 2; n <= batasCekGrid; n++) {
+              const gabunganGrid = kataList.slice(0, n).map(it => it.arab).join(' ');
+              if (normalisasiUntukCocokkan(gabunganGrid) === BASMALAH_NORMAL) { gBasmalahEnd = n; break; }
+            }
+          }
           html += `<div class="hasil-aliran">`;
           kataList.forEach((item, index) => {
+            if (gBasmalahEnd > 0 && index === gBasmalahEnd) {
+              html += `</div><div class="hasil-aliran">`;
+            }
             const {
               gramatikal,
               targetRujukan,
