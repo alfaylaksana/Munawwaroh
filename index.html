@@ -1991,6 +1991,39 @@ body.mode-html-aktif .hasil-kotak {
       color: #fff;
       box-shadow: 0 2px 12px rgba(201,168,76,0.5);
     }
+    .skala-slider-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+    }
+    .btn-skala-step {
+      flex: 0 0 auto;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 2px solid #c9a84c;
+      background: #fffdf7;
+      color: #6b4e1a;
+      font-weight: bold;
+      font-size: 15px;
+      line-height: 1;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .skala-range {
+      flex: 1 1 auto;
+      min-width: 60px;
+      accent-color: #c9a84c;
+    }
+    .skala-label {
+      flex: 0 0 auto;
+      width: 40px;
+      text-align: right;
+      font-size: 11px;
+      font-weight: bold;
+      color: #6b4e1a;
+    }
     /* ===== END SKALA ===== */
 
     .arab {
@@ -3239,10 +3272,11 @@ body.mode-html-aktif .hasil-kotak {
         <button class="drop-item" id="togTanpa" onclick="setHarakat('tanpa');tutupDropdown()">Tanpa harakat</button>
         <div class="dropdown-divider"></div>
         <div class="dropdown-label">Ukuran Teks</div>
-        <div style="display:flex;gap:6px;padding:4px 8px;">
-          <button class="btn-skala" id="dropBtnK" onclick="setSkala(0.7,'K');tutupDropdown()">K</button>
-          <button class="btn-skala" id="dropBtnS" onclick="setSkala(0.85,'S');tutupDropdown()">S</button>
-          <button class="btn-skala aktif-skala" id="dropBtnB" onclick="setSkala(1,'B');tutupDropdown()">B</button>
+        <div class="skala-slider-row">
+          <button class="btn-skala-step" onclick="ubahSkalaPersen(-5)">−</button>
+          <input type="range" class="skala-range" id="skalaRangeDrop" min="60" max="160" step="1" value="100" oninput="setSkalaPersen(this.value)">
+          <button class="btn-skala-step" onclick="ubahSkalaPersen(5)">+</button>
+          <span class="skala-label" id="skalaLabelDrop">100%</span>
         </div>
         <div class="dropdown-divider"></div>
         <button class="drop-item" id="btnModeBaca" onclick="toggleModeBaca();tutupDropdown()" style="font-weight:bold;color:#7a5a20;">📚 Menu Kajian</button>
@@ -3326,10 +3360,11 @@ body.mode-html-aktif .hasil-kotak {
           <button class="float-drop-item" id="togKodeFloat" onclick="toggleKode();tutupFloatDropdown()">Tampilkan Kode</button>
           <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
           <div class="float-drop-label">Ukuran Teks</div>
-          <div style="display:flex;gap:6px;padding:4px 8px;">
-            <button class="btn-skala" id="floatBtnK" onclick="setSkala(0.7,'K');tutupFloatDropdown()" title="Kecil">K</button>
-            <button class="btn-skala" id="floatBtnS" onclick="setSkala(0.85,'S');tutupFloatDropdown()" title="Sedang">S</button>
-            <button class="btn-skala aktif-skala" id="floatBtnB" onclick="setSkala(1,'B');tutupFloatDropdown()" title="Besar">B</button>
+          <div class="skala-slider-row">
+            <button class="btn-skala-step" onclick="ubahSkalaPersen(-5)">−</button>
+            <input type="range" class="skala-range" id="skalaRangeFloat" min="60" max="160" step="1" value="100" oninput="setSkalaPersen(this.value)">
+            <button class="btn-skala-step" onclick="ubahSkalaPersen(5)">+</button>
+            <span class="skala-label" id="skalaLabelFloat">100%</span>
           </div>
         </div>
       </div>
@@ -4759,23 +4794,36 @@ function gotoHalamanTerakhir() {
       return teks;
     }
 
-    function setSkala(val, kode) {
-      document.documentElement.style.setProperty('--fs', val);
-      localStorage.setItem('skala-tampilan', kode);
-      ['K','S','B'].forEach(k => {
-        const aktif = k === kode;
-        ['dropBtn','floatBtn'].forEach(p => {
-          const el = document.getElementById(p + k);
-          if (el) el.classList.toggle('aktif-skala', aktif);
-        });
+    function setSkalaPersen(persenMentah) {
+      const persen = Math.max(60, Math.min(160, Math.round(Number(persenMentah) || 100)));
+      document.documentElement.style.setProperty('--fs', persen / 100);
+      localStorage.setItem('skala-tampilan-persen', persen);
+      ['skalaRangeDrop', 'skalaRangeFloat'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = persen;
+      });
+      ['skalaLabelDrop', 'skalaLabelFloat'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = persen + '%';
       });
     }
 
-    // Init skala dari localStorage
+    function ubahSkalaPersen(delta) {
+      const skrg = Math.round(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--fs')) * 100) || 100;
+      setSkalaPersen(skrg + delta);
+    }
+
+    // Init skala dari localStorage — migrasi otomatis dari format lama (K/S/B)
+    // kalau blm pernah pakai slider persen sama sekali.
     (function(){
-      const saved = localStorage.getItem('skala-tampilan') || 'B';
-      const map = {K:0.7, S:0.85, B:1};
-      setSkala(map[saved] || 1, saved);
+      const savedPersen = localStorage.getItem('skala-tampilan-persen');
+      if (savedPersen !== null) {
+        setSkalaPersen(savedPersen);
+      } else {
+        const savedLama = localStorage.getItem('skala-tampilan') || 'B';
+        const map = {K:70, S:85, B:100};
+        setSkalaPersen(map[savedLama] || 100);
+      }
     })();
 
     function togglePegon() {
