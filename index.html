@@ -3264,13 +3264,22 @@ body.mode-html-aktif .hasil-kotak {
 
   <div class="toolbar">
     <div class="dropdown">
-      <button class="btn-tool" onclick="toggleDropdown('dropTampilan')">👁 Tampilan ▾</button>
-      <div class="dropdown-menu" id="dropTampilan">
+      <button class="btn-tool" onclick="toggleDropdown('dropKajian')">📚 Kajian ▾</button>
+      <div class="dropdown-menu" id="dropKajian">
+        <button class="drop-item" id="btnModeBaca" onclick="toggleModeBaca();tutupDropdown()" style="font-weight:bold;color:#7a5a20;">📚 Menu Kajian</button>
+        <div class="dropdown-divider"></div>
         <div class="dropdown-label">Harakat</div>
         <button class="drop-item aktif" id="togLengkap" onclick="setHarakat('lengkap');tutupDropdown()">Lengkap</button>
         <button class="drop-item" id="togIrab" onclick="setHarakat('irab');tutupDropdown()">I'rab saja</button>
         <button class="drop-item" id="togTanpa" onclick="setHarakat('tanpa');tutupDropdown()">Tanpa harakat</button>
         <div class="dropdown-divider"></div>
+        <button class="drop-item aktif" id="togPegon" onclick="togglePegon();tutupDropdown()">Tampilkan Pegon</button>
+        <button class="drop-item aktif" id="togKode" onclick="toggleKode();tutupDropdown()">Tampilkan Kode</button>
+      </div>
+    </div>
+    <div class="dropdown">
+      <button class="btn-tool" onclick="toggleDropdown('dropTampilan')">👁 Tampilan ▾</button>
+      <div class="dropdown-menu" id="dropTampilan">
         <div class="dropdown-label">Ukuran Teks</div>
         <div class="skala-slider-row">
           <button class="btn-skala-step" onclick="ubahSkalaPersen(-5)">−</button>
@@ -3278,11 +3287,6 @@ body.mode-html-aktif .hasil-kotak {
           <button class="btn-skala-step" onclick="ubahSkalaPersen(5)">+</button>
           <span class="skala-label" id="skalaLabelDrop">100%</span>
         </div>
-        <div class="dropdown-divider"></div>
-        <button class="drop-item" id="btnModeBaca" onclick="toggleModeBaca();tutupDropdown()" style="font-weight:bold;color:#7a5a20;">📚 Menu Kajian</button>
-        <div class="dropdown-divider"></div>
-        <button class="drop-item aktif" id="togPegon" onclick="togglePegon();tutupDropdown()">Tampilkan Pegon</button>
-        <button class="drop-item aktif" id="togKode" onclick="toggleKode();tutupDropdown()">Tampilkan Kode</button>
       </div>
     </div>
     <div class="dropdown">
@@ -3347,18 +3351,22 @@ body.mode-html-aktif .hasil-kotak {
   <div class="float-bar">
     <div class="float-left">
       <div class="float-dropdown">
-        <button class="btn-float bulat" onclick="toggleFloatDropdown('menuFloatTampilan')" title="Tampilan">👁</button>
-        <div class="float-dropdown-menu" id="menuFloatTampilan" style="max-height:80vh;overflow-y:auto;">
+        <button class="btn-float bulat" onclick="toggleFloatDropdown('menuFloatKajian')" title="Pengaturan Kajian">📚</button>
+        <div class="float-dropdown-menu" id="menuFloatKajian" style="max-height:80vh;overflow-y:auto;">
+          <button class="float-drop-item" id="btnModeBacaFloat" onclick="toggleModeBaca();tutupFloatDropdown()" style="font-weight:bold;color:#7a5a20;">📚 Menu Kajian</button>
+          <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
           <div class="float-drop-label">Harakat</div>
           <button class="float-drop-item" onclick="setHarakat('lengkap');tutupFloatDropdown()">Lengkap</button>
           <button class="float-drop-item" onclick="setHarakat('irab');tutupFloatDropdown()">I'rab saja</button>
           <button class="float-drop-item" onclick="setHarakat('tanpa');tutupFloatDropdown()">Tanpa harakat</button>
           <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
-          <button class="float-drop-item" id="btnModeBacaFloat" onclick="toggleModeBaca();tutupFloatDropdown()" style="font-weight:bold;color:#7a5a20;">📚 Menu Kajian</button>
-          <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
           <button class="float-drop-item" id="togPegonFloat" onclick="togglePegon();tutupFloatDropdown()">Tampilkan Pegon</button>
           <button class="float-drop-item" id="togKodeFloat" onclick="toggleKode();tutupFloatDropdown()">Tampilkan Kode</button>
-          <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
+        </div>
+      </div>
+      <div class="float-dropdown">
+        <button class="btn-float bulat" onclick="toggleFloatDropdown('menuFloatTampilan')" title="Tampilan">👁</button>
+        <div class="float-dropdown-menu" id="menuFloatTampilan" style="max-height:80vh;overflow-y:auto;">
           <div class="float-drop-label">Ukuran Teks</div>
           <div class="skala-slider-row">
             <button class="btn-skala-step" onclick="ubahSkalaPersen(-5)">−</button>
