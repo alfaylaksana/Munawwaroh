@@ -6820,8 +6820,8 @@ document.querySelectorAll('.halaman-input').forEach((hal, hIdx) => {
                     <span class="arab" data-asli="${arab}">${arabTampil}</span>
                     <div class="bawah-kata">
                       ${rujukanRowHtml}
-                      <span class="pegon jawa${hiddenCls}" ${geserStyle} data-indo="${maknaIndo}" data-jawa="${maknaJawa}" onclick="bukaEditPegonInline(event,'${item.id}')">${maknaJawa||maknaIndo}</span>
-                      <span class="pegon indo${hiddenCls}" ${geserStyle} data-indo="${maknaIndo}" data-jawa="${maknaJawa}" onclick="bukaEditPegonInline(event,'${item.id}')">${maknaIndo||maknaJawa}</span>
+                      <span class="pegon jawa${hiddenCls}" ${geserStyle} data-indo="${maknaIndo}" data-jawa="${maknaJawa}" onclick="if (!document.body.classList.contains('mode-admin')) { bukaKartuBaca(event,'${item.id}'); } else { bukaEditPegonInline(event,'${item.id}'); }">${maknaJawa||maknaIndo}</span>
+                      <span class="pegon indo${hiddenCls}" ${geserStyle} data-indo="${maknaIndo}" data-jawa="${maknaJawa}" onclick="if (!document.body.classList.contains('mode-admin')) { bukaKartuBaca(event,'${item.id}'); } else { bukaEditPegonInline(event,'${item.id}'); }">${maknaIndo||maknaJawa}</span>
                     </div>
                   </div>`;
                 });
@@ -6935,9 +6935,9 @@ if(arab)kataList.push({kode,arab,maknaIndo,maknaJawa,nomor,krKanan,paksaBaris,be
             <div class="bawah-kata">
               ${rujukanRowHtml}
               ${item.belumAdaArti
-                ? `<span class="pegon indo belum-isi" ${geserStyle} onclick="bukaEditPegonInline(event,'${item.srcId}')">(belum ada arti)</span>`
-                : `<span class="pegon jawa${hiddenCls}" ${geserStyle} data-indo="${item.maknaIndo}" data-jawa="${item.maknaJawa}" onclick="bukaEditPegonInline(event,'${item.srcId}')">${item.maknaJawa || item.maknaIndo}</span>
-              <span class="pegon indo${hiddenCls}" ${geserStyle} data-indo="${item.maknaIndo}" data-jawa="${item.maknaJawa}" onclick="bukaEditPegonInline(event,'${item.srcId}')">${item.maknaIndo || item.maknaJawa}</span>`}
+                ? `<span class="pegon indo belum-isi" ${geserStyle} onclick="if (!document.body.classList.contains('mode-admin')) { bukaKartuBaca(event,'${item.srcId}'); } else { bukaEditPegonInline(event,'${item.srcId}'); }">(belum ada arti)</span>`
+                : `<span class="pegon jawa${hiddenCls}" ${geserStyle} data-indo="${item.maknaIndo}" data-jawa="${item.maknaJawa}" onclick="if (!document.body.classList.contains('mode-admin')) { bukaKartuBaca(event,'${item.srcId}'); } else { bukaEditPegonInline(event,'${item.srcId}'); }">${item.maknaJawa || item.maknaIndo}</span>
+              <span class="pegon indo${hiddenCls}" ${geserStyle} data-indo="${item.maknaIndo}" data-jawa="${item.maknaJawa}" onclick="if (!document.body.classList.contains('mode-admin')) { bukaKartuBaca(event,'${item.srcId}'); } else { bukaEditPegonInline(event,'${item.srcId}'); }">${item.maknaIndo || item.maknaJawa}</span>`}
             </div>
             ${nomorHtml}
           </div>${item.paksaBaris ? '<div class="pemisah-baris"></div>' : ''}`;
