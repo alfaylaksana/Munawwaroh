@@ -3028,14 +3028,21 @@ body.mode-html-aktif .hasil-kotak {
   border-color: #a07840;
   color: #fff;
 }
-.tasrifan-editor:empty::before {
+.tasrifan-editor { position: relative; }
+.tasrifan-editor.kosong::before {
   content: attr(data-placeholder);
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  top: 7px;
   color: #a09070;
   pointer-events: none;
+  direction: ltr;
+  text-align: left;
 }
-.tasrifan-editor p { margin: 3px 0; }
-.tasrifan-editor ul { margin: 3px 0; padding-left: 18px; }
-.tasrifan-editor li { margin: 2px 0; }
+.tasrifan-editor p, .tasrifan-editor div { margin: 3px 0; text-align: justify; }
+.tasrifan-editor ul { margin: 3px 0; padding-left: 0; padding-inline-start: 18px; }
+.tasrifan-editor li { margin: 2px 0; text-align: justify; }
 
 .textarea-catatan-scroll::-webkit-scrollbar {
   width: 6px;
@@ -3864,20 +3871,60 @@ function arahBlokTasrifan(teks) {
   return a > l ? 'rtl' : 'ltr';
 }
 
+// Teks lepas di luar <p>/<ul>/<div> (mis. baris pertama) dibungkus <p>,
+// supaya tiap baris punya blok sendiri yang bisa diberi arah (LTR/RTL).
+function bungkusTeksLepasTasrifan(root) {
+  let grup = null;
+  Array.from(root.childNodes).forEach(n => {
+    const blok = n.nodeType === 1 && (n.tagName === 'P' || n.tagName === 'UL' || n.tagName === 'DIV');
+    if (blok) { grup = null; return; }
+    if (!grup && n.nodeType === 3 && !n.nodeValue.trim()) return;
+    if (!grup) { grup = document.createElement('p'); root.insertBefore(grup, n); }
+    grup.appendChild(n);
+  });
+}
+
+// ---- Editor Tasrifan: arah (LTR/RTL) + placeholder langsung saat mengedit ----
+function terapkanArahEditorTasrifan(ed) {
+  Array.from(ed.children).forEach(el => {
+    if (el.tagName === 'P' || el.tagName === 'UL' || el.tagName === 'DIV') {
+      const arah = arahBlokTasrifan(el.textContent);
+      if (el.getAttribute('dir') !== arah) el.setAttribute('dir', arah);
+    }
+  });
+}
+
+function rapikanEditorTasrifan(ed) {
+  if (!ed) return;
+  bungkusTeksLepasTasrifan(ed);
+  const kosong = !ed.textContent.replace(/\u00A0/g, ' ').trim() && !ed.querySelector('li');
+  if (kosong) {
+    const p1 = ed.children.length === 1 && ed.firstElementChild.tagName === 'P' &&
+      ed.firstElementChild.childNodes.length === 1 && ed.firstElementChild.firstChild.nodeName === 'BR';
+    if (!p1) {
+      ed.innerHTML = '<p><br></p>';
+      if (document.activeElement === ed) {
+        try {
+          const sel = window.getSelection();
+          const r = document.createRange();
+          r.setStart(ed.firstChild, 0);
+          r.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(r);
+        } catch (e) {}
+      }
+    }
+  }
+  ed.classList.toggle('kosong', kosong);
+  terapkanArahEditorTasrifan(ed);
+}
+
 function tasrifanKeHtmlTampil(nilai) {
   const html = tasrifanKeHtml(nilai);
   if (!html) return '';
   const tpl = document.createElement('template');
   tpl.innerHTML = html;
-  // Teks lepas di luar <p>/<ul> (mis. baris pertama editor) dibungkus <p>.
-  let grup = null;
-  Array.from(tpl.content.childNodes).forEach(n => {
-    const blok = n.nodeType === 1 && (n.tagName === 'P' || n.tagName === 'UL');
-    if (blok) { grup = null; return; }
-    if (!grup && n.nodeType === 3 && !n.nodeValue.trim()) return;
-    if (!grup) { grup = document.createElement('p'); tpl.content.insertBefore(grup, n); }
-    grup.appendChild(n);
-  });
+  bungkusTeksLepasTasrifan(tpl.content);
   tpl.content.querySelectorAll('p, ul').forEach(el => {
     el.setAttribute('dir', arahBlokTasrifan(el.textContent));
   });
@@ -3901,6 +3948,7 @@ function formatTasrifan(cmd) {
   if (!ed) return;
   ed.focus();
   document.execCommand(cmd, false, null);
+  rapikanEditorTasrifan(ed);
   perbaruiStatusToolbarTasrifan();
 }
 
@@ -3925,10 +3973,24 @@ function pasangEditorTasrifan() {
     const t = (e.clipboardData || window.clipboardData).getData('text/plain');
     document.execCommand('insertText', false, t);
   });
-  // Supaya placeholder muncul lagi kalau semua isi dihapus.
-  ed.addEventListener('input', () => {
-    if (!ed.textContent.trim() && !ed.querySelector('li')) ed.innerHTML = '';
+  // Arah paragraf (LTR/RTL) dicek 0,3 dtk setelah berhenti mengetik; kotak
+  // kosong & placeholder dirapikan seketika. Selama komposisi keyboard
+  // (IME / Keyman) tidak ada yang disentuh, supaya ketikan tidak terganggu.
+  let sedangKomposisi = false;
+  let timerArah = null;
+  ed.addEventListener('compositionstart', () => { sedangKomposisi = true; });
+  ed.addEventListener('compositionend', () => {
+    sedangKomposisi = false;
+    clearTimeout(timerArah);
+    timerArah = setTimeout(() => rapikanEditorTasrifan(ed), 300);
   });
+  ed.addEventListener('input', () => {
+    if (sedangKomposisi) return;
+    ed.classList.toggle('kosong', !ed.textContent.replace(/\u00A0/g, ' ').trim() && !ed.querySelector('li'));
+    clearTimeout(timerArah);
+    timerArah = setTimeout(() => rapikanEditorTasrifan(ed), 300);
+  });
+  rapikanEditorTasrifan(ed);
   const upd = () => {
     if (!document.body.contains(ed)) { document.removeEventListener('selectionchange', upd); return; }
     perbaruiStatusToolbarTasrifan();
@@ -4035,7 +4097,7 @@ function terapkanDraftKePopup(d) {
   set('popupEditCatatan', d.catatan);
   set('popupEditPengali', d.pengali);
   const ed = document.getElementById('popupEditTasrifan');
-  if (ed) ed.innerHTML = tasrifanKeHtml(d.tasrifan);
+  if (ed) { ed.innerHTML = tasrifanKeHtml(d.tasrifan); rapikanEditorTasrifan(ed); }
   if ((d.catatan || '').trim()) {
     const w = document.getElementById('popupCatatanWrap');
     if (w) w.style.display = '';
