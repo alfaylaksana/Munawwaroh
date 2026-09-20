@@ -3001,7 +3001,7 @@ body.mode-html-aktif .hasil-kotak {
   /* Sentuhan-geser di kotak ini terkunci di sini saja, tidak "lari"
      ke scroll popup induk — supaya sekali sentuh langsung kena. */
   overscroll-behavior: contain;
-  touch-action: pan-y;
+  touch-action: pan-y pinch-zoom;
 }
 
 /* Editor Tasrifan & I'rab (teks berformat: tebal/miring/garis bawah/poin) */
@@ -4054,6 +4054,7 @@ function bukaEditPegonInline(event, srcId, draft) {
 
   const popup = document.createElement('div');
   popup.className = 'popup-edit-pegon';
+  popup.setAttribute('spellcheck', 'false');
   popup.dataset.srcId = srcId;
   popup.dataset.asli = inputArab?.value || '';
   popup.innerHTML = `
