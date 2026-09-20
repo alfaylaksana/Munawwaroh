@@ -2914,12 +2914,13 @@ body.mode-html-aktif .hasil-kotak {
 
 .kartu-baca-nilai-catatan ul {
   margin: 4px 0;
-  padding-left: 16px;
+  padding-left: 0;
+  padding-inline-start: 16px; /* ikut arah (LTR/RTL) daftar */
 }
 
 .kartu-baca-nilai-catatan li {
   margin: 2px 0;
-  text-align: left;
+  text-align: justify;
 }
 
 .kartu-baca-nilai-catatan p {
@@ -3850,6 +3851,39 @@ function tasrifanKeHtml(nilai) {
   return renderCatatanRapi(v);
 }
 
+// Tampilan Mode Kajian: tiap paragraf / daftar poin diberi arah sendiri.
+// Blok dianggap Arab (RTL) kalau huruf Arabnya lebih banyak daripada huruf
+// Latin; selain itu LTR. (Bukan dari huruf pertama, karena poin Indonesia
+// sering diawali kata Arab.) Harakat tidak dihitung.
+const RE_HURUF_ARAB = /[\u0621-\u064A\u066E-\u06D3\u06FA-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/g;
+const RE_HURUF_LATIN = /[A-Za-z\u00C0-\u024F]/g;
+
+function arahBlokTasrifan(teks) {
+  const a = (teks.match(RE_HURUF_ARAB) || []).length;
+  const l = (teks.match(RE_HURUF_LATIN) || []).length;
+  return a > l ? 'rtl' : 'ltr';
+}
+
+function tasrifanKeHtmlTampil(nilai) {
+  const html = tasrifanKeHtml(nilai);
+  if (!html) return '';
+  const tpl = document.createElement('template');
+  tpl.innerHTML = html;
+  // Teks lepas di luar <p>/<ul> (mis. baris pertama editor) dibungkus <p>.
+  let grup = null;
+  Array.from(tpl.content.childNodes).forEach(n => {
+    const blok = n.nodeType === 1 && (n.tagName === 'P' || n.tagName === 'UL');
+    if (blok) { grup = null; return; }
+    if (!grup && n.nodeType === 3 && !n.nodeValue.trim()) return;
+    if (!grup) { grup = document.createElement('p'); tpl.content.insertBefore(grup, n); }
+    grup.appendChild(n);
+  });
+  tpl.content.querySelectorAll('p, ul').forEach(el => {
+    el.setAttribute('dir', arahBlokTasrifan(el.textContent));
+  });
+  return tpl.innerHTML;
+}
+
 function ambilTasrifanDariEditor() {
   const ed = document.getElementById('popupEditTasrifan');
   if (!ed) return '';
@@ -3925,7 +3959,7 @@ function bukaKartuBaca(event, srcId) {
     kartuKajian.className = 'kartu-baca';
     kartuKajian.innerHTML = `
       ${arab ? `<div class="kartu-baca-arab" style="direction:rtl;">${arab}</div>` : ''}
-      <div class="kartu-baca-baris"><div class="kartu-baca-nilai kartu-baca-nilai-catatan">${tasrifanKeHtml(tasrifan)}</div></div>
+      <div class="kartu-baca-baris"><div class="kartu-baca-nilai kartu-baca-nilai-catatan">${tasrifanKeHtmlTampil(tasrifan)}</div></div>
       <div class="kartu-baca-aksi">
         <button type="button" class="btn-tutup-kartu" onclick="document.querySelectorAll('.kartu-baca').forEach(k=>{k._roKartu?.disconnect();k.remove();})">Tutup</button>
       </div>
