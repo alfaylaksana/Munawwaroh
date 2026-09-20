@@ -3953,9 +3953,86 @@ function bukaKartuBaca(event, srcId) {
   posisikanKartuBaca(kartu, el);
 }
 
-function bukaEditPegonInline(event, srcId) {
+// ============================================================
+// Draf popup edit — supaya isian yang BELUM disimpan tidak hilang saat
+// Ustaz pindah ke app lain dan tab di-reload OS. Draf ditulis ke
+// localStorage (saat popup dibuka, tiap mengetik, dan saat app disembunyikan),
+// dipulihkan otomatis setelah halaman selesai dimuat, dan dihapus begitu
+// popup ditutup lewat Simpan / Batal / ketuk di luar popup.
+// ============================================================
+const KUNCI_DRAFT_POPUP = 'munawwaroh_draftPopupEdit';
+let _timerDraftPopup = null;
+
+function simpanDraftPopupEdit() {
+  const popup = document.querySelector('.popup-edit-pegon');
+  if (!popup || !popup.dataset.srcId) return;
+  const g = (id) => document.getElementById(id)?.value || '';
+  const draft = {
+    srcId: popup.dataset.srcId,
+    asli: popup.dataset.asli || '',
+    arab: g('popupEditArab'),
+    kode: g('popupEditKode'),
+    indo: g('popupEditIndo'),
+    jawa: g('popupEditJawa'),
+    catatan: g('popupEditCatatan'),
+    pengali: g('popupEditPengali'),
+    tasrifan: ambilTasrifanDariEditor(),
+    ts: Date.now()
+  };
+  try { localStorage.setItem(KUNCI_DRAFT_POPUP, JSON.stringify(draft)); } catch (e) {}
+}
+
+function jadwalSimpanDraftPopupEdit() {
+  clearTimeout(_timerDraftPopup);
+  _timerDraftPopup = setTimeout(simpanDraftPopupEdit, 300);
+}
+
+function hapusDraftPopupEdit() {
+  clearTimeout(_timerDraftPopup);
+  try { localStorage.removeItem(KUNCI_DRAFT_POPUP); } catch (e) {}
+}
+
+function terapkanDraftKePopup(d) {
+  const set = (id, v) => { const e = document.getElementById(id); if (e) e.value = v || ''; };
+  set('popupEditArab', d.arab);
+  set('popupEditKode', d.kode);
+  set('popupEditIndo', d.indo);
+  set('popupEditJawa', d.jawa);
+  set('popupEditCatatan', d.catatan);
+  set('popupEditPengali', d.pengali);
+  const ed = document.getElementById('popupEditTasrifan');
+  if (ed) ed.innerHTML = tasrifanKeHtml(d.tasrifan);
+  if ((d.catatan || '').trim()) {
+    const w = document.getElementById('popupCatatanWrap');
+    if (w) w.style.display = '';
+    const t = document.getElementById('popupCatatanToggleWrap');
+    if (t) t.style.display = 'none';
+  }
+}
+
+function pulihkanDraftPopupEdit() {
+  let d = null;
+  try { d = JSON.parse(localStorage.getItem(KUNCI_DRAFT_POPUP) || 'null'); } catch (e) {}
+  if (!d || !d.srcId) return;
+  if (!document.body.classList.contains('mode-admin')) { hapusDraftPopupEdit(); return; }
+  const row = document.getElementById(d.srcId);
+  const inputArab = row && (row.querySelector('.arab-input') || row.querySelector('.s-arab'));
+  // Cek baris yang sama: teks Arab aslinya harus cocok dengan saat popup dibuka.
+  if (!row || !inputArab || (inputArab.value || '') !== (d.asli || '')) {
+    hapusDraftPopupEdit();
+    alert('Popup edit yang belum tersimpan tidak bisa dikembalikan otomatis (barisnya tidak ditemukan / berubah).');
+    return;
+  }
+  let anchor = null;
+  try { anchor = document.querySelector('[onclick*="bukaEditPegonInline(event,\'' + d.srcId + '\')"]'); } catch (e) {}
+  if (!anchor) anchor = { getBoundingClientRect: () => ({ bottom: window.innerHeight * 0.12 }) };
+  bukaEditPegonInline({ stopPropagation() {}, currentTarget: anchor }, d.srcId, d);
+}
+
+function bukaEditPegonInline(event, srcId, draft) {
   event.stopPropagation();
   document.querySelectorAll('.popup-edit-pegon').forEach(p => p.remove());
+  if (!draft) hapusDraftPopupEdit();
 
   const row = document.getElementById(srcId);
   if (!row) { alert('Baris input tidak ditemukan (mungkin sudah dihapus/diubah).'); return; }
@@ -3977,6 +4054,8 @@ function bukaEditPegonInline(event, srcId) {
 
   const popup = document.createElement('div');
   popup.className = 'popup-edit-pegon';
+  popup.dataset.srcId = srcId;
+  popup.dataset.asli = inputArab?.value || '';
   popup.innerHTML = `
     <label>Teks Arab (ayat) — hati-hati, jarang perlu diubah</label>
     <input type="text" id="popupEditArab" value="${(inputArab?.value||'').replace(/"/g,'&quot;')}" placeholder="كَلِمَة" style="direction:rtl;text-align:right;font-size:16px;" />
@@ -4010,6 +4089,9 @@ function bukaEditPegonInline(event, srcId) {
   `;
   document.body.appendChild(popup);
   pasangEditorTasrifan();
+  if (draft) terapkanDraftKePopup(draft);
+  simpanDraftPopupEdit();
+  popup.addEventListener('input', jadwalSimpanDraftPopupEdit);
 
   const rect = el.getBoundingClientRect();
   const popupW = window.innerWidth * 0.94;
@@ -4036,11 +4118,12 @@ function bukaEditPegonInline(event, srcId) {
   }
 
   setTimeout(() => {
-    document.getElementById('popupEditIndo')?.focus();
+    if (!draft) document.getElementById('popupEditIndo')?.focus();
     document.addEventListener('click', function handler(e) {
       if (!popup.contains(e.target)) {
         popup._roPegon?.disconnect();
         popup.remove();
+        hapusDraftPopupEdit();
       }
     }, { once: true, capture: true });
   }, 250);
@@ -4048,6 +4131,7 @@ function bukaEditPegonInline(event, srcId) {
 
 function tutupPopupEditPegon() {
   document.querySelectorAll('.popup-edit-pegon').forEach(p => { p._roPegon?.disconnect(); p.remove(); });
+  hapusDraftPopupEdit();
 }
 
 function simpanEditPegonInline(srcId) {
@@ -7991,6 +8075,9 @@ html += `</div>`;
             }));
           }
         } catch (e) {}
+
+        // Kembalikan popup edit yang belum sempat disimpan (lihat draf popup edit).
+        setTimeout(() => { try { pulihkanDraftPopupEdit(); } catch (e) {} }, 700);
       }).catch(e => { alert('ERROR: ' + e.message); });
     }
 
@@ -8067,6 +8154,7 @@ html += `</div>`;
     // "mau pindah" itu dan langsung simpan tanpa nunggu debounce.
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') {
+        simpanDraftPopupEdit();
         clearTimeout(_simpanTimer);
         simpanDB(ambilSemuaData()).catch(() => {
           try { localStorage.setItem('gandul_data', JSON.stringify(ambilSemuaData())); } catch(e) {}
@@ -8074,6 +8162,8 @@ html += `</div>`;
         try { localStorage.setItem('posisiScrollTerakhir', String(window.scrollY)); } catch (e) {}
       }
     });
+
+    window.addEventListener('pagehide', simpanDraftPopupEdit);
 
     init();
   </script>
