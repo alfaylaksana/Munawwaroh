@@ -3004,6 +3004,38 @@ body.mode-html-aktif .hasil-kotak {
   touch-action: pan-y;
 }
 
+/* Editor Tasrifan & I'rab (teks berformat: tebal/miring/garis bawah/poin) */
+.tasrifan-toolbar {
+  display: flex;
+  gap: 4px;
+  margin: 2px 0 4px;
+}
+.tasrifan-toolbar button {
+  min-width: 32px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid #d4b87a;
+  border-radius: 4px;
+  background: #fbf5e0;
+  color: #5a4010;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+.tasrifan-toolbar button.aktif {
+  background: #c9a84c;
+  border-color: #a07840;
+  color: #fff;
+}
+.tasrifan-editor:empty::before {
+  content: attr(data-placeholder);
+  color: #a09070;
+  pointer-events: none;
+}
+.tasrifan-editor p { margin: 3px 0; }
+.tasrifan-editor ul { margin: 3px 0; padding-left: 18px; }
+.tasrifan-editor li { margin: 2px 0; }
+
 .textarea-catatan-scroll::-webkit-scrollbar {
   width: 6px;
 }
@@ -3782,6 +3814,94 @@ function posisikanKartuBaca(kartu, el) {
   }, 250);
 }
 
+// ============================================================
+// Tasrifan & I'rab — teks berformat (tebal / miring / garis bawah / poin).
+// Disimpan sebagai HTML sederhana (hanya tag b, i, u, br, p, ul, li — tag
+// & atribut lain dibuang saat disimpan DAN saat ditampilkan). Data lama
+// (teks biasa, baris baru, poin "- ") tetap terbaca lewat renderCatatanRapi.
+// ============================================================
+const TASRIFAN_TAG_OK = { B:'b', STRONG:'b', I:'i', EM:'i', U:'u', BR:'br', UL:'ul', LI:'li', P:'p', DIV:'p' };
+
+function bersihkanHtmlTasrifan(html) {
+  const tpl = document.createElement('template');
+  tpl.innerHTML = html || '';
+  function salin(node) {
+    let out = '';
+    node.childNodes.forEach(n => {
+      if (n.nodeType === 3) {
+        out += n.nodeValue.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      } else if (n.nodeType === 1) {
+        if (n.tagName === 'SCRIPT' || n.tagName === 'STYLE') return;
+        const t = TASRIFAN_TAG_OK[n.tagName];
+        if (t === 'br') { out += '<br>'; return; }
+        const isi = salin(n);
+        out += t ? '<' + t + '>' + isi + '</' + t + '>' : isi;
+      }
+    });
+    return out;
+  }
+  return salin(tpl.content);
+}
+
+function tasrifanKeHtml(nilai) {
+  const v = nilai || '';
+  if (!v.trim()) return '';
+  if (/<\/?(b|i|u|br|ul|li|p)\b/i.test(v)) return bersihkanHtmlTasrifan(v);
+  return renderCatatanRapi(v);
+}
+
+function ambilTasrifanDariEditor() {
+  const ed = document.getElementById('popupEditTasrifan');
+  if (!ed) return '';
+  let bersih = bersihkanHtmlTasrifan(ed.innerHTML);
+  const tmp = document.createElement('div');
+  tmp.innerHTML = bersih;
+  if (!tmp.textContent.replace(/\u00A0/g, ' ').trim()) return '';
+  const kosong = '(?:<p><br></p>|<p></p>|<br>)';
+  bersih = bersih.replace(new RegExp('^' + kosong + '+'), '').replace(new RegExp(kosong + '+$'), '');
+  return bersih;
+}
+
+function formatTasrifan(cmd) {
+  const ed = document.getElementById('popupEditTasrifan');
+  if (!ed) return;
+  ed.focus();
+  document.execCommand(cmd, false, null);
+  perbaruiStatusToolbarTasrifan();
+}
+
+function perbaruiStatusToolbarTasrifan() {
+  document.querySelectorAll('.tasrifan-toolbar button[data-cmd]').forEach(b => {
+    let on = false;
+    try { on = document.queryCommandState(b.dataset.cmd); } catch (e) {}
+    b.classList.toggle('aktif', !!on);
+  });
+}
+
+function pasangEditorTasrifan() {
+  const ed = document.getElementById('popupEditTasrifan');
+  if (!ed) return;
+  try {
+    document.execCommand('styleWithCSS', false, false);
+    document.execCommand('defaultParagraphSeparator', false, 'p');
+  } catch (e) {}
+  // Tempel selalu sebagai teks polos (format dari luar tidak ikut masuk).
+  ed.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const t = (e.clipboardData || window.clipboardData).getData('text/plain');
+    document.execCommand('insertText', false, t);
+  });
+  // Supaya placeholder muncul lagi kalau semua isi dihapus.
+  ed.addEventListener('input', () => {
+    if (!ed.textContent.trim() && !ed.querySelector('li')) ed.innerHTML = '';
+  });
+  const upd = () => {
+    if (!document.body.contains(ed)) { document.removeEventListener('selectionchange', upd); return; }
+    perbaruiStatusToolbarTasrifan();
+  };
+  document.addEventListener('selectionchange', upd);
+}
+
 function bukaKartuBaca(event, srcId) {
   event.stopPropagation();
   document.querySelectorAll('.popup-edit-pegon, .kartu-baca').forEach(p => p.remove());
@@ -3805,7 +3925,7 @@ function bukaKartuBaca(event, srcId) {
     kartuKajian.className = 'kartu-baca';
     kartuKajian.innerHTML = `
       ${arab ? `<div class="kartu-baca-arab" style="direction:rtl;">${arab}</div>` : ''}
-      <div class="kartu-baca-baris"><div class="kartu-baca-nilai kartu-baca-nilai-catatan">${renderCatatanRapi(tasrifan)}</div></div>
+      <div class="kartu-baca-baris"><div class="kartu-baca-nilai kartu-baca-nilai-catatan">${tasrifanKeHtml(tasrifan)}</div></div>
       <div class="kartu-baca-aksi">
         <button type="button" class="btn-tutup-kartu" onclick="document.querySelectorAll('.kartu-baca').forEach(k=>{k._roKartu?.disconnect();k.remove();})">Tutup</button>
       </div>
@@ -3867,7 +3987,13 @@ function bukaEditPegonInline(event, srcId) {
     <label>Pegon Jawa</label>
     <input type="text" id="popupEditJawa" value="${(inputJawa.value||'').replace(/"/g,'&quot;')}" placeholder="tegese..." />
     <label>Tasrifan &amp; I'rab (ditampilkan di popup Mode Kajian)</label>
-    <textarea id="popupEditTasrifan" class="textarea-catatan-scroll" placeholder="tasrifan &amp; i'rab kata ini..." style="width:100%;min-height:60px;max-height:160px;overflow-y:auto;border:1px solid #e0d0a0;border-radius:4px;background:transparent;padding:4px 6px;font-family:Georgia,serif;font-size:11px;color:#1a1208;box-sizing:border-box;resize:vertical;">${(inputTasrifan?.value||'').replace(/</g,'&lt;')}</textarea>
+    <div class="tasrifan-toolbar">
+      <button type="button" tabindex="-1" data-cmd="bold" title="Tebal" onmousedown="event.preventDefault()" onclick="formatTasrifan('bold')"><b>B</b></button>
+      <button type="button" tabindex="-1" data-cmd="italic" title="Miring" onmousedown="event.preventDefault()" onclick="formatTasrifan('italic')"><i>I</i></button>
+      <button type="button" tabindex="-1" data-cmd="underline" title="Garis bawah" onmousedown="event.preventDefault()" onclick="formatTasrifan('underline')"><u>U</u></button>
+      <button type="button" tabindex="-1" data-cmd="insertUnorderedList" title="Poin-poin" onmousedown="event.preventDefault()" onclick="formatTasrifan('insertUnorderedList')">&#8226; Poin</button>
+    </div>
+    <div id="popupEditTasrifan" class="textarea-catatan-scroll tasrifan-editor" contenteditable="true" data-placeholder="tasrifan &amp; i'rab kata ini..." style="width:100%;min-height:60px;max-height:160px;overflow-y:auto;border:1px solid #e0d0a0;border-radius:4px;background:transparent;padding:4px 6px;font-family:Georgia,serif;font-size:11px;color:#1a1208;box-sizing:border-box;resize:vertical;">${tasrifanKeHtml(inputTasrifan?.value)}</div>
     <div id="popupCatatanToggleWrap" style="${catatanAda ? 'display:none;' : ''}">
       <a href="javascript:void(0)" id="popupCatatanToggle" style="display:inline-block;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:#c9a84c;margin-top:6px;text-decoration:underline;" onclick="document.getElementById('popupCatatanToggleWrap').style.display='none';document.getElementById('popupCatatanWrap').style.display='block';document.getElementById('popupEditCatatan').focus();">+ Tambah catatan</a>
     </div>
@@ -3883,6 +4009,7 @@ function bukaEditPegonInline(event, srcId) {
     </div>
   `;
   document.body.appendChild(popup);
+  pasangEditorTasrifan();
 
   const rect = el.getBoundingClientRect();
   const popupW = window.innerWidth * 0.94;
@@ -3937,7 +4064,7 @@ function simpanEditPegonInline(srcId) {
   const nilaiJawa = document.getElementById('popupEditJawa')?.value || '';
   const nilaiKode = document.getElementById('popupEditKode')?.value || '';
   const nilaiCatatan = document.getElementById('popupEditCatatan')?.value || '';
-  const nilaiTasrifan = document.getElementById('popupEditTasrifan')?.value || '';
+  const nilaiTasrifan = ambilTasrifanDariEditor();
   const nilaiPengaliStr = document.getElementById('popupEditPengali')?.value || '';
   if (inputArab && nilaiArab.trim()) inputArab.value = nilaiArab;
   if (inputIndo) inputIndo.value = nilaiIndo;
@@ -5842,7 +5969,7 @@ function tambahHalamanDaftarKode(data = {}) {
       const tr = document.createElement('tr');
       tr.id = 'kata-' + id;
       tr.innerHTML = `
-      <td class="col-kode"><input class="kode-input" type="text" placeholder="م · ١ · [١]" value="${kode}" /><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="kr-kanan-cb" ${krKanan?'checked':''} style="width:12px;height:12px;"> KR→kanan</label><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="paksa-baris-cb" ${paksaBaris?'checked':''} style="width:12px;height:12px;"> ↵ Baris baru</label><input class="geser-pegon-input" type="number" placeholder="Geser px" value="${geserPegon||''}" title="Geser Pegon (px): positif=kiri, negatif=kanan" style="width:54px;font-size:9px;margin-top:2px;border:1px solid #d4b87a;border-radius:3px;padding:1px 3px;color:#7a5a20;" /><input class="catatan-input" type="hidden" value="${(catatan||'').replace(/"/g,'&quot;')}" /><input class="tasrifan-input" type="hidden" value="${(tasrifan||'').replace(/"/g,'&quot;')}" /></td>
+      <td class="col-kode"><input class="kode-input" type="text" placeholder="م · ١ · [١]" value="${kode}" /><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="kr-kanan-cb" ${krKanan?'checked':''} style="width:12px;height:12px;"> KR→kanan</label><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="paksa-baris-cb" ${paksaBaris?'checked':''} style="width:12px;height:12px;"> ↵ Baris baru</label><input class="geser-pegon-input" type="number" placeholder="Geser px" value="${geserPegon||''}" title="Geser Pegon (px): positif=kiri, negatif=kanan" style="width:54px;font-size:9px;margin-top:2px;border:1px solid #d4b87a;border-radius:3px;padding:1px 3px;color:#7a5a20;" /><input class="catatan-input" type="hidden" value="${(catatan||'').replace(/"/g,'&quot;')}" /><input class="tasrifan-input" type="hidden" value="${(tasrifan||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" /></td>
       <td><input class="arab-input" type="text" placeholder="كَلِمَة" value="${arab}" /></td>
       <td class="col-indo td-indo-${babId}"><input class="makna-indo" type="text" placeholder="artinya..." value="${maknaIndo}" /></td>
 <td class="col-jawa td-jawa-${babId}" style="display:none;"><input class="makna-jawa" type="text" placeholder="tegese..." value="${maknaJawa}" /></td>
@@ -7702,10 +7829,18 @@ html += `</div>`;
         _tapAdminCount = 0;
         const aktifSekarang = document.body.classList.contains('mode-admin');
         if (aktifSekarang) {
-          // Nonaktifkan mode admin = sekalian logout, biar bersih.
+          // Keluar dari mode admin. Kalau kode singkat sudah ada (atau baru
+          // dibuat sekarang), sesi login TETAP disimpan supaya masuk lagi
+          // cukup dengan kode singkat. Kalau tidak ada kode: sekalian
+          // logout seperti sebelumnya.
           setModeAdmin(false);
-          if (authFirebase) authFirebase.signOut().catch(() => {});
-          alert('🔒 Menu Data disembunyikan lagi & keluar dari akun admin.');
+          if (!ambilKodeAdmin()) tawarkanBuatKodeAdmin();
+          if (ambilKodeAdmin()) {
+            alert('🔒 Kembali ke mode user. Login admin tetap tersimpan di perangkat ini — masuk lagi cukup dengan kode singkat.');
+          } else {
+            if (authFirebase) authFirebase.signOut().catch(() => {});
+            alert('🔒 Menu Data disembunyikan lagi & keluar dari akun admin.');
+          }
           return;
         }
         // Mengaktifkan mode admin — wajib login dulu.
@@ -7714,23 +7849,81 @@ html += `</div>`;
           return;
         }
         if (authFirebase.currentUser) {
+          const kode = ambilKodeAdmin();
+          if (kode) {
+            const masukan = prompt('Kode singkat admin (3 karakter).\nKosongkan lalu OK = login ulang dengan email & kata sandi.');
+            if (masukan === null) return;
+            if (masukan.trim() === '') {
+              hapusKodeAdmin();
+              authFirebase.signOut().catch(() => {}).then(() => loginAdminPenuh());
+              return;
+            }
+            if (masukan.trim() !== kode) {
+              _salahKodeAdmin++;
+              if (_salahKodeAdmin >= 3) {
+                // 3x salah berturut-turut: kode dihapus & sesi login ditutup.
+                _salahKodeAdmin = 0;
+                hapusKodeAdmin();
+                if (authFirebase) authFirebase.signOut().catch(() => {});
+                alert('Kode salah 3x. Sesi admin ditutup — masuk lagi dengan email & kata sandi.');
+              } else {
+                alert('Kode salah.');
+              }
+              return;
+            }
+            _salahKodeAdmin = 0;
+            setModeAdmin(true);
+            alert('🔓 Menu Data diaktifkan (tombol 💾 kini tampil) — login sebagai ' + authFirebase.currentUser.email);
+            return;
+          }
           setModeAdmin(true);
           alert('🔓 Menu Data diaktifkan (tombol 💾 kini tampil) — masih login sebagai ' + authFirebase.currentUser.email);
+          tawarkanBuatKodeAdmin();
           return;
         }
-        const email = prompt('Email admin:');
-        if (!email) return;
-        const pass = prompt('Kata sandi:');
-        if (!pass) return;
-        authFirebase.signInWithEmailAndPassword(email.trim(), pass)
-          .then(() => {
-            setModeAdmin(true);
-            alert('🔓 Menu Data diaktifkan (tombol 💾 kini tampil) — tersimpan, tetap mode admin walau reload, sampai logout/diubah manual lagi.');
-          })
-          .catch((err) => {
-            alert('Gagal login: ' + (err && err.message ? err.message : err));
-          });
+        loginAdminPenuh();
       }
+    }
+
+    // ---- Kode singkat admin (pengujian) ----
+    // Bukan pengganti kata sandi: hanya mempermudah keluar-masuk mode admin
+    // di perangkat yang SUDAH login. Kode dibuat sendiri & disimpan di
+    // localStorage perangkat ini saja (tidak ada di kode sumber).
+    const KUNCI_KODE_ADMIN = 'munawwaroh_kodeAdminSingkat';
+    let _salahKodeAdmin = 0;
+    function ambilKodeAdmin() {
+      try { return localStorage.getItem(KUNCI_KODE_ADMIN) || ''; } catch (e) { return ''; }
+    }
+    function hapusKodeAdmin() {
+      try { localStorage.removeItem(KUNCI_KODE_ADMIN); } catch (e) {}
+    }
+    function tawarkanBuatKodeAdmin() {
+      if (ambilKodeAdmin()) return;
+      const k = prompt('Buat kode singkat 3 karakter untuk masuk mode admin lebih cepat di perangkat ini.\n(Kosongkan / Batal = lewati)');
+      if (k === null || !k.trim()) return;
+      if (k.trim().length !== 3) {
+        alert('Kode harus tepat 3 karakter — dilewati.');
+        return;
+      }
+      try {
+        localStorage.setItem(KUNCI_KODE_ADMIN, k.trim());
+        alert('✅ Kode singkat tersimpan di perangkat ini.');
+      } catch (e) {}
+    }
+    function loginAdminPenuh() {
+      const email = prompt('Email admin:');
+      if (!email) return;
+      const pass = prompt('Kata sandi:');
+      if (!pass) return;
+      authFirebase.signInWithEmailAndPassword(email.trim(), pass)
+        .then(() => {
+          setModeAdmin(true);
+          alert('🔓 Menu Data diaktifkan (tombol 💾 kini tampil) — tersimpan, tetap mode admin walau reload, sampai logout/diubah manual lagi.');
+          tawarkanBuatKodeAdmin();
+        })
+        .catch((err) => {
+          alert('Gagal login: ' + (err && err.message ? err.message : err));
+        });
     }
     function setModeAdmin(aktif) {
       document.body.classList.toggle('mode-admin', aktif);
