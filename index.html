@@ -7796,11 +7796,14 @@ html += `</div>`;
       // (٭ FDFD) sebelum benar2 diukur, supaya device yg agak lambat tidak
       // mengukur terlalu dini dan menghasilkan ukuran yg keliru.
       const jadwalkanPasBasmalah = () => requestAnimationFrame(() => requestAnimationFrame(pasBasmalah));
+      window._ukur && window._ukur('    sebelum akses document.fonts.ready');
       if (document.fonts && document.fonts.ready) {
+        window._ukur && window._ukur('    ...document.fonts.ready diakses (getter selesai)');
         document.fonts.ready.then(() => { window._ukur && window._ukur('  font siap (document.fonts.ready)'); jadwalkanPasBasmalah(); });
       } else {
         setTimeout(jadwalkanPasBasmalah, 300);
       }
+      window._ukur && window._ukur('    sesudah daftar .then() font');
 
       // Syiir tetap di dalam hasil-halaman sesuai posisi DOM (tidak di-appendChild keluar)
       // Posisi render sudah benar karena mengikuti urutan bab dalam halaman
