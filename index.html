@@ -5453,20 +5453,24 @@ function gotoHalamanInput() {
 }
 
     function updateNavHasil(navList) {
+  window._ukur && window._ukur('      [nav] mulai');
   const list = document.getElementById('listNavHasil');
   const total = navList ? navList.length : 0;
   if (!total) {
     list.innerHTML = '<div class="float-drop-item" style="color:#aaa;cursor:default;">Belum ada hasil</div>';
     return;
   }
+  window._ukur && window._ukur('      [nav] cek total (' + total + ' item)');
   // Kalau Mode Bacaan + data mushaf sudah siap, pakai penomoran yg sesuai
   // halaman fisik mushaf ASLI (sadar-gabungan) — bukan sekadar hitungan
   // urut Halaman-app yg bisa nyasar begitu ada Halaman-app yg digabung
   // tampilannya (lihat hitungNomorHalamanBacaan()).
   const nomorMap = (modeBacaanAktif && hitungNomorHalamanBacaan()) || hitungNomorHalaman();
+  window._ukur && window._ukur('      [nav] nomorMap selesai (' + nomorMap.size + ' halaman, modeBacaan=' + !!modeBacaanAktif + ')');
   const semuaNomor = [...nomorMap.values()].map(v => v.nomor).filter(n => n !== null && n !== undefined);
   const maxNomor = semuaNomor.length ? Math.max(...semuaNomor) : total;
   const minNomor = semuaNomor.length ? Math.min(...semuaNomor) : 1;
+  window._ukur && window._ukur('      [nav] min/max nomor dihitung');
   list.innerHTML = `
     <div style="padding:10px 14px;display:flex;align-items:center;gap:6px;">
       <span style="font-size:11px;color:#a07840;white-space:nowrap;">Hlm.</span>
@@ -5478,6 +5482,7 @@ function gotoHalamanInput() {
     </div>
     <div style="padding:2px 14px 6px;font-size:10px;color:#b0a080;font-style:italic;">Total: ${semuaNomor.length ? new Set(semuaNomor).size : maxNomor} halaman</div>
   `;
+  window._ukur && window._ukur('      [nav] list.innerHTML terpasang');
   list._navList = navList;
   setTimeout(() => {
     const inp = document.getElementById('gotoInputHasil');
