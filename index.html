@@ -2935,6 +2935,33 @@ body.mode-html-aktif .hasil-kotak {
   text-align: center;
 }
 
+.kata-tashrif-pilihan {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  direction: rtl;
+  margin: 2px 0 6px;
+}
+.btn-kata-tashrif {
+  font-size: 16px;
+  line-height: 1.6;
+  padding: 1px 12px;
+  border: 1px solid #d4b87a;
+  border-radius: 14px;
+  background: #fbf5e0;
+  color: #1a1208;
+  cursor: pointer;
+}
+.btn-kata-tashrif.aktif {
+  background: #c9a84c;
+  border-color: #a07840;
+  color: #fff;
+}
+.btn-kata-tashrif.kosongkan {
+  font-size: 10px;
+  direction: ltr;
+  border-style: dashed;
+}
 .kartu-baca-nav {
   display: flex;
   justify-content: space-between;
@@ -4256,6 +4283,10 @@ function isiKartuKajian(kartu, tampil) {
   const d = kartu._dataKajian;
   const adaDua = d.tasrifan.trim() && d.tashrif.trim();
   const teks = tampil === 'tashrif' ? d.tashrif : d.tasrifan;
+  // Di tampilan Tashrifan, kata di atas = "kata yang di-tashrif" (bila diisi);
+  // di tampilan I'rab tetap frasa lengkap.
+  const kt = (d.kataTashrif || '').trim().replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const arabTampil = (tampil === 'tashrif' && kt) ? kt : d.arab;
   const nav = adaDua ? `<div class="kartu-baca-nav">
       <button type="button" class="btn-ganti-kartu" onclick="gantiTampilanKartuKajian(this)">${tampil === 'tashrif' ? "I'rab" : 'Tashrifan'}</button>
       <span class="kartu-baca-nav-info">${tampil === 'tashrif' ? 'Tashrifan' : "I'rab"}</span>
@@ -4263,7 +4294,7 @@ function isiKartuKajian(kartu, tampil) {
   kartu.dataset.tampil = tampil;
   kartu.innerHTML = `
       ${nav}
-      ${d.arab ? `<div class="kartu-baca-arab" style="direction:rtl;">${d.arab}</div>` : ''}
+      ${arabTampil ? `<div class="kartu-baca-arab" style="direction:rtl;">${arabTampil}</div>` : ''}
       <div class="kartu-baca-baris"><div class="kartu-baca-nilai kartu-baca-nilai-catatan">${tasrifanKeHtmlTampil(teks)}</div></div>
       <div class="kartu-baca-aksi">
         <button type="button" class="btn-tutup-kartu" onclick="document.querySelectorAll('.kartu-baca').forEach(k=>{k._roKartu?.disconnect();k.remove();})">Tutup</button>
@@ -4292,6 +4323,7 @@ function bukaKartuBaca(event, srcId) {
   const catatan = (row.querySelector('.catatan-input') || {}).value || '';
   const tasrifan = (row.querySelector('.tasrifan-input') || {}).value || '';
   const tashrif = (row.querySelector('.tashrif-input') || {}).value || '';
+  const kataTashrif = (row.querySelector('.kata-tashrif-input') || {}).value || '';
 
   // Mode Kajian: info dasar (Pegon/Indo/Kode) sudah kelihatan langsung di layar,
   // jadi popup di sini KHUSUS utk Tasrifan & I'rab — kalau kata itu blm diisi
@@ -4300,7 +4332,7 @@ function bukaKartuBaca(event, srcId) {
     if (!tasrifan.trim() && !tashrif.trim()) return;
     const kartuKajian = document.createElement('div');
     kartuKajian.className = 'kartu-baca';
-    kartuKajian._dataKajian = { arab, tasrifan, tashrif };
+    kartuKajian._dataKajian = { arab, tasrifan, tashrif, kataTashrif };
     isiKartuKajian(kartuKajian, tasrifan.trim() ? 'irab' : 'tashrif');
     document.body.appendChild(kartuKajian);
     posisikanKartuBaca(kartuKajian, event.currentTarget);
@@ -4350,6 +4382,7 @@ function simpanDraftPopupEdit() {
     pengali: g('popupEditPengali'),
     tasrifan: ambilTasrifanDariEditor('popupEditTasrifan'),
     tashrif: ambilTasrifanDariEditor('popupEditTashrif'),
+    kataTashrif: g('popupEditKataTashrif'),
     ts: Date.now()
   };
   try { localStorage.setItem(KUNCI_DRAFT_POPUP, JSON.stringify(draft)); } catch (e) {}
@@ -4373,6 +4406,8 @@ function terapkanDraftKePopup(d) {
   set('popupEditJawa', d.jawa);
   set('popupEditCatatan', d.catatan);
   set('popupEditPengali', d.pengali);
+  set('popupEditKataTashrif', d.kataTashrif);
+  bangunPilihanKataTashrif();
   const ed = document.getElementById('popupEditTasrifan');
   if (ed) { ed.innerHTML = tasrifanKeHtml(d.tasrifan); rapikanEditorTasrifan(ed); }
   const edT = document.getElementById('popupEditTashrif');
@@ -4404,6 +4439,59 @@ function pulihkanDraftPopupEdit() {
   bukaEditPegonInline({ stopPropagation() {}, currentTarget: anchor }, d.srcId, d);
 }
 
+// ---- Pilihan "kata yang di-tashrif" di popup edit ----
+// Kata-kata diambil dari kolom Teks Arab; diketuk = terisi ke kolomnya
+// (harakat persis sama). Kolom tetap bisa diedit manual.
+function bangunPilihanKataTashrif() {
+  const wadah = document.getElementById('popupKataTashrifPilihan');
+  const arab = document.getElementById('popupEditArab');
+  if (!wadah || !arab) return;
+  wadah.innerHTML = '';
+  (arab.value || '').split(/\s+/).filter(Boolean).forEach(k => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn-kata-tashrif';
+    b.dataset.kata = k;
+    b.textContent = k;
+    wadah.appendChild(b);
+  });
+  const x = document.createElement('button');
+  x.type = 'button';
+  x.className = 'btn-kata-tashrif kosongkan';
+  x.dataset.kata = '';
+  x.textContent = 'kosongkan';
+  wadah.appendChild(x);
+  tandaiAktifKataTashrif();
+}
+
+function tandaiAktifKataTashrif() {
+  const wadah = document.getElementById('popupKataTashrifPilihan');
+  const isi = document.getElementById('popupEditKataTashrif');
+  if (!wadah || !isi) return;
+  const aktif = (isi.value || '').trim();
+  wadah.querySelectorAll('button[data-kata]').forEach(b => {
+    if (b.classList.contains('kosongkan')) { b.style.display = aktif ? '' : 'none'; return; }
+    b.classList.toggle('aktif', !!aktif && b.dataset.kata === aktif);
+  });
+}
+
+function pasangPilihanKataTashrif() {
+  const wadah = document.getElementById('popupKataTashrifPilihan');
+  const arab = document.getElementById('popupEditArab');
+  const isi = document.getElementById('popupEditKataTashrif');
+  if (!wadah || !arab || !isi) return;
+  wadah.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-kata]');
+    if (!b) return;
+    isi.value = b.dataset.kata;
+    tandaiAktifKataTashrif();
+    jadwalSimpanDraftPopupEdit();
+  });
+  arab.addEventListener('input', bangunPilihanKataTashrif);
+  isi.addEventListener('input', tandaiAktifKataTashrif);
+  bangunPilihanKataTashrif();
+}
+
 // Toolbar (B / I / U / Poin) + kotak editor berformat untuk satu kolom.
 function htmlEditorTasrifan(idEditor, placeholder, isi) {
   const tb = (cmd, judul, label) => '<button type="button" tabindex="-1" data-cmd="' + cmd + '" title="' + judul +
@@ -4431,6 +4519,7 @@ function bukaEditPegonInline(event, srcId, draft) {
   const inputCatatan = row.querySelector('.catatan-input');
   const inputTasrifan = row.querySelector('.tasrifan-input');
   const inputTashrif = row.querySelector('.tashrif-input');
+  const inputKataTashrif = row.querySelector('.kata-tashrif-input');
   if (!inputIndo || !inputJawa) return;
 
   const halamanInputEl = row.closest('.halaman-input');
@@ -4458,6 +4547,9 @@ function bukaEditPegonInline(event, srcId, draft) {
     ${htmlEditorTasrifan('popupEditTasrifan', "i'rab kata ini...", tasrifanKeHtml(inputTasrifan?.value))}
     <label>Tashrifan (tombol "Tashrifan" di popup Mode Kajian — kosongkan bila kata jamid)</label>
     ${htmlEditorTasrifan('popupEditTashrif', "tashrifan kata ini (kosongkan bila jamid)...", tasrifanKeHtml(inputTashrif?.value))}
+    <label>Kata yang di-tashrif (tampil di atas kartu Tashrifan — kosongkan = frasa lengkap)</label>
+    <div id="popupKataTashrifPilihan" class="kata-tashrif-pilihan"></div>
+    <input type="text" id="popupEditKataTashrif" value="${(inputKataTashrif?.value||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" placeholder="نَجْعَلِ" style="direction:rtl;text-align:right;font-size:16px;" />
     <div id="popupCatatanToggleWrap" style="${catatanAda ? 'display:none;' : ''}">
       <a href="javascript:void(0)" id="popupCatatanToggle" style="display:inline-block;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:#c9a84c;margin-top:6px;text-decoration:underline;" onclick="document.getElementById('popupCatatanToggleWrap').style.display='none';document.getElementById('popupCatatanWrap').style.display='block';document.getElementById('popupEditCatatan').focus();">+ Tambah catatan</a>
     </div>
@@ -4474,6 +4566,7 @@ function bukaEditPegonInline(event, srcId, draft) {
   `;
   document.body.appendChild(popup);
   pasangEditorTasrifan();
+  pasangPilihanKataTashrif();
   if (draft) terapkanDraftKePopup(draft);
   simpanDraftPopupEdit();
   popup.addEventListener('input', jadwalSimpanDraftPopupEdit);
@@ -4529,6 +4622,7 @@ function simpanEditPegonInline(srcId) {
   const inputCatatan = row.querySelector('.catatan-input');
   const inputTasrifan = row.querySelector('.tasrifan-input');
   const inputTashrif = row.querySelector('.tashrif-input');
+  const inputKataTashrif = row.querySelector('.kata-tashrif-input');
   const nilaiArab = document.getElementById('popupEditArab')?.value || '';
   const nilaiIndo = document.getElementById('popupEditIndo')?.value || '';
   const nilaiJawa = document.getElementById('popupEditJawa')?.value || '';
@@ -4536,6 +4630,7 @@ function simpanEditPegonInline(srcId) {
   const nilaiCatatan = document.getElementById('popupEditCatatan')?.value || '';
   const nilaiTasrifan = ambilTasrifanDariEditor('popupEditTasrifan');
   const nilaiTashrif = ambilTasrifanDariEditor('popupEditTashrif');
+  const nilaiKataTashrif = (document.getElementById('popupEditKataTashrif')?.value || '').trim();
   const nilaiPengaliStr = document.getElementById('popupEditPengali')?.value || '';
   if (inputArab && nilaiArab.trim()) inputArab.value = nilaiArab;
   if (inputIndo) inputIndo.value = nilaiIndo;
@@ -4544,6 +4639,7 @@ function simpanEditPegonInline(srcId) {
   if (inputCatatan) inputCatatan.value = nilaiCatatan;
   if (inputTasrifan) inputTasrifan.value = nilaiTasrifan;
   if (inputTashrif) inputTashrif.value = nilaiTashrif;
+  if (inputKataTashrif) inputKataTashrif.value = nilaiKataTashrif;
 
   const halamanInputEl = row.closest('.halaman-input');
   const teksArabBersih = (inputArab?.value || '').replace(/[\u064B-\u065F]/g, '').trim();
@@ -6425,7 +6521,7 @@ function tambahHalamanDaftarKode(data = {}) {
   <button class="btn-tambah-kata" style="background:#8b6914;" onclick="tambahKataAwal(${id})" title="Sisipkan kata baru di paling atas (mis. untuk Basmalah)">⇧ Sisipkan di Awal</button>
 `;
       container.appendChild(div);
-      if (kataList && kataList.length) kataList.forEach(d => tambahKata(id, d.arab, d.maknaIndo || d.makna || '', d.maknaJawa || '', d.kode || '', d.nomor || '', d.krKanan || false, d.geserPegon || '', d.paksaBaris || false, d.catatan || '', d.tasrifan || '', d.tashrif || ''));
+      if (kataList && kataList.length) kataList.forEach(d => tambahKata(id, d.arab, d.maknaIndo || d.makna || '', d.maknaJawa || '', d.kode || '', d.nomor || '', d.krKanan || false, d.geserPegon || '', d.paksaBaris || false, d.catatan || '', d.tasrifan || '', d.tashrif || '', d.kataTashrif || ''));
       else tambahKata(id);
     }
 
@@ -6434,14 +6530,14 @@ function tambahHalamanDaftarKode(data = {}) {
         document.getElementById(id)?.remove();
     }
 
-    function tambahKata(babId, arab = '', maknaIndo = '', maknaJawa = '', kode = '', nomor = '', krKanan = false, geserPegon = '', paksaBaris = false, catatan = '', tasrifan = '', tashrif = '') {
+    function tambahKata(babId, arab = '', maknaIndo = '', maknaJawa = '', kode = '', nomor = '', krKanan = false, geserPegon = '', paksaBaris = false, catatan = '', tasrifan = '', tashrif = '', kataTashrif = '') {
       const tbody = document.getElementById('tbody-' + babId);
       if (!tbody) return;
       const id = kataCounter++;
       const tr = document.createElement('tr');
       tr.id = 'kata-' + id;
       tr.innerHTML = `
-      <td class="col-kode"><input class="kode-input" type="text" placeholder="م · ١ · [١]" value="${kode}" /><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="kr-kanan-cb" ${krKanan?'checked':''} style="width:12px;height:12px;"> KR→kanan</label><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="paksa-baris-cb" ${paksaBaris?'checked':''} style="width:12px;height:12px;"> ↵ Baris baru</label><input class="geser-pegon-input" type="number" placeholder="Geser px" value="${geserPegon||''}" title="Geser Pegon (px): positif=kiri, negatif=kanan" style="width:54px;font-size:9px;margin-top:2px;border:1px solid #d4b87a;border-radius:3px;padding:1px 3px;color:#7a5a20;" /><input class="catatan-input" type="hidden" value="${(catatan||'').replace(/"/g,'&quot;')}" /><input class="tasrifan-input" type="hidden" value="${(tasrifan||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" /><input class="tashrif-input" type="hidden" value="${(tashrif||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" /></td>
+      <td class="col-kode"><input class="kode-input" type="text" placeholder="م · ١ · [١]" value="${kode}" /><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="kr-kanan-cb" ${krKanan?'checked':''} style="width:12px;height:12px;"> KR→kanan</label><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="paksa-baris-cb" ${paksaBaris?'checked':''} style="width:12px;height:12px;"> ↵ Baris baru</label><input class="geser-pegon-input" type="number" placeholder="Geser px" value="${geserPegon||''}" title="Geser Pegon (px): positif=kiri, negatif=kanan" style="width:54px;font-size:9px;margin-top:2px;border:1px solid #d4b87a;border-radius:3px;padding:1px 3px;color:#7a5a20;" /><input class="catatan-input" type="hidden" value="${(catatan||'').replace(/"/g,'&quot;')}" /><input class="tasrifan-input" type="hidden" value="${(tasrifan||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" /><input class="tashrif-input" type="hidden" value="${(tashrif||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" /><input class="kata-tashrif-input" type="hidden" value="${(kataTashrif||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" /></td>
       <td><input class="arab-input" type="text" placeholder="كَلِمَة" value="${arab}" /></td>
       <td class="col-indo td-indo-${babId}"><input class="makna-indo" type="text" placeholder="artinya..." value="${maknaIndo}" /></td>
 <td class="col-jawa td-jawa-${babId}" style="display:none;"><input class="makna-jawa" type="text" placeholder="tegese..." value="${maknaJawa}" /></td>
@@ -6462,7 +6558,7 @@ function tambahHalamanDaftarKode(data = {}) {
       const tr = document.createElement('tr');
       tr.id = 'kata-' + id;
       tr.innerHTML = `
-      <td class="col-kode"><input class="kode-input" type="text" placeholder="م · ١ · [١]" value="" /><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="kr-kanan-cb" style="width:12px;height:12px;"> KR→kanan</label><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="paksa-baris-cb" style="width:12px;height:12px;"> ↵ Baris baru</label><input class="geser-pegon-input" type="number" placeholder="Geser px" value="" title="Geser Pegon (px): positif=kiri, negatif=kanan" style="width:54px;font-size:9px;margin-top:2px;border:1px solid #d4b87a;border-radius:3px;padding:1px 3px;color:#7a5a20;" /><input class="catatan-input" type="hidden" value="" /><input class="tasrifan-input" type="hidden" value="" /><input class="tashrif-input" type="hidden" value="" /></td>
+      <td class="col-kode"><input class="kode-input" type="text" placeholder="م · ١ · [١]" value="" /><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="kr-kanan-cb" style="width:12px;height:12px;"> KR→kanan</label><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="paksa-baris-cb" style="width:12px;height:12px;"> ↵ Baris baru</label><input class="geser-pegon-input" type="number" placeholder="Geser px" value="" title="Geser Pegon (px): positif=kiri, negatif=kanan" style="width:54px;font-size:9px;margin-top:2px;border:1px solid #d4b87a;border-radius:3px;padding:1px 3px;color:#7a5a20;" /><input class="catatan-input" type="hidden" value="" /><input class="tasrifan-input" type="hidden" value="" /><input class="tashrif-input" type="hidden" value="" /><input class="kata-tashrif-input" type="hidden" value="" /></td>
       <td><input class="arab-input" type="text" placeholder="كَلِمَة" value="" /></td>
       <td class="col-indo td-indo-${babId}"><input class="makna-indo" type="text" placeholder="artinya..." value="" /></td>
       <td class="col-jawa td-jawa-${babId}" style="display:none;"><input class="makna-jawa" type="text" placeholder="tegese..." value="" /></td>
@@ -6496,7 +6592,7 @@ function tambahHalamanDaftarKode(data = {}) {
       const trBaru = document.createElement('tr');
       trBaru.id = 'kata-' + id;
       trBaru.innerHTML = `
-      <td class="col-kode"><input class="kode-input" type="text" placeholder="م · ١ · [١]" value="" /><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="kr-kanan-cb" style="width:12px;height:12px;"> KR→kanan</label><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="paksa-baris-cb" style="width:12px;height:12px;"> ↵ Baris baru</label><input class="geser-pegon-input" type="number" placeholder="Geser px" value="" title="Geser Pegon (px): positif=kiri, negatif=kanan" style="width:54px;font-size:9px;margin-top:2px;border:1px solid #d4b87a;border-radius:3px;padding:1px 3px;color:#7a5a20;" /><input class="catatan-input" type="hidden" value="" /><input class="tasrifan-input" type="hidden" value="" /><input class="tashrif-input" type="hidden" value="" /></td>
+      <td class="col-kode"><input class="kode-input" type="text" placeholder="م · ١ · [١]" value="" /><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="kr-kanan-cb" style="width:12px;height:12px;"> KR→kanan</label><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="paksa-baris-cb" style="width:12px;height:12px;"> ↵ Baris baru</label><input class="geser-pegon-input" type="number" placeholder="Geser px" value="" title="Geser Pegon (px): positif=kiri, negatif=kanan" style="width:54px;font-size:9px;margin-top:2px;border:1px solid #d4b87a;border-radius:3px;padding:1px 3px;color:#7a5a20;" /><input class="catatan-input" type="hidden" value="" /><input class="tasrifan-input" type="hidden" value="" /><input class="tashrif-input" type="hidden" value="" /><input class="kata-tashrif-input" type="hidden" value="" /></td>
       <td><input class="arab-input" type="text" placeholder="كَلِمَة" value="" /></td>
       <td class="col-indo td-indo-${babId}"><input class="makna-indo" type="text" placeholder="artinya..." value="" /></td>
       <td class="col-jawa td-jawa-${babId}" style="display:none;"><input class="makna-jawa" type="text" placeholder="tegese..." value="" /></td>
@@ -7474,7 +7570,7 @@ document.querySelectorAll('.halaman-input').forEach((hal, hIdx) => {
             const nomor=tr.querySelector('.nom-input').value.trim();
             const krKanan=tr.querySelector('.kr-kanan-cb')?.checked||false;
             const paksaBaris=tr.querySelector('.paksa-baris-cb')?.checked||false;
-if(arab)kataList.push({kode,arab,maknaIndo,maknaJawa,nomor,krKanan,paksaBaris,belumAdaArti:!(maknaIndo||maknaJawa),geserPegon:tr.querySelector('.geser-pegon-input')?.value||'',catatan:tr.querySelector('.catatan-input')?.value||'',tasrifan:tr.querySelector('.tasrifan-input')?.value||'',tashrif:tr.querySelector('.tashrif-input')?.value||'',srcId:tr.id});        
+if(arab)kataList.push({kode,arab,maknaIndo,maknaJawa,nomor,krKanan,paksaBaris,belumAdaArti:!(maknaIndo||maknaJawa),geserPegon:tr.querySelector('.geser-pegon-input')?.value||'',catatan:tr.querySelector('.catatan-input')?.value||'',tasrifan:tr.querySelector('.tasrifan-input')?.value||'',tashrif:tr.querySelector('.tashrif-input')?.value||'',kataTashrif:tr.querySelector('.kata-tashrif-input')?.value||'',srcId:tr.id});        
          });
           html += `<div class="hasil-bab-section">`;
           const judulIndo = bab.querySelector('.bab-judul-indo')?.value.trim() || '';
@@ -8018,6 +8114,7 @@ html += `</div>`;
               catatan: tr.querySelector('.catatan-input')?.value || '',
               tasrifan: tr.querySelector('.tasrifan-input')?.value || '',
               tashrif: tr.querySelector('.tashrif-input')?.value || '',
+              kataTashrif: tr.querySelector('.kata-tashrif-input')?.value || '',
             });
           });
           babList.push({
@@ -8531,7 +8628,7 @@ html += `</div>`;
     // yang ditambah belakangan juga (tanpa perlu ubah tiap fungsi
     // pembuat baris satu-satu).
     document.getElementById('containerHalaman').addEventListener('input', (e) => {
-      if (e.target.matches('.kode-input, .arab-input, .makna-indo, .makna-jawa, .geser-pegon-input, .catatan-input, .tasrifan-input, .tashrif-input')) {
+      if (e.target.matches('.kode-input, .arab-input, .makna-indo, .makna-jawa, .geser-pegon-input, .catatan-input, .tasrifan-input, .tashrif-input, .kata-tashrif-input')) {
         simpan();
       }
     });
