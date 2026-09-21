@@ -3345,6 +3345,8 @@ body.mode-html-aktif .hasil-kotak {
   }
 
   window._ukur = function (label) {
+    if (window._ukurSelesai) return;          // sesudah konten tampil, abaikan penanda berikutnya
+    if (label.indexOf('KONTEN TAMPIL') >= 0) window._ukurSelesai = true;
     const t = performance.now() / 1000;
     const sebelum = baris.length ? baris[baris.length - 1].t : 0;
     baris.push({ t, d: t - sebelum, label });
@@ -7252,7 +7254,7 @@ function terapkanLebarKolom(halEl) {
       let nomorHalIsi = 0;
       let nomorCatatanNahwu = 0;
       const nomorHalamanMap = hitungNomorHalaman();
-      const nomorHalamanMapMushaf = hitungNomorHalamanBacaan(); // nomor mushaf asli (mulai 582) — khusus badge halaman bab biasa, spy sama antara Mode Kajian & Mode Bacaan
+      const nomorHalamanMapMushaf = hitungNomorHalamanBacaan(); window._ukur && window._ukur('  tampilkan: nomor halaman dihitung'); // nomor mushaf asli (mulai 582) — khusus badge halaman bab biasa, spy sama antara Mode Kajian & Mode Bacaan
       if (judulKitab || judulArab) {
         html += `<div class="cover-kitab">
         ${judulArab?`<div class="judul-arab">${judulArab}</div>`:''}
@@ -7736,13 +7738,18 @@ html += `</div>`;
       // ULANG (mis. sedang edit di mode admin) TIDAK disembunyikan, supaya
       // tidak kelap-kelip tiap kali mengetik.
       const renderPertamaKali = hasilEl.dataset.pernahRender !== '1';
+      window._ukur && window._ukur('  tampilkan: HTML dirakit (' + Math.round(html.length / 1024) + ' KB)');
       hasilEl.innerHTML = html;
+      window._ukur && window._ukur('  tampilkan: innerHTML terpasang (parse selesai)');
       hasilEl.dataset.pernahRender = '1';
       if (renderPertamaKali) {
         hasilEl.style.visibility = 'hidden';
         // Jaring pengaman: kalau karena sebab apa pun proses di atas gagal
         // jalan, jangan sampai layar tersembunyi selamanya.
-        setTimeout(() => { hasilEl.style.visibility = 'visible'; }, 4000);
+        setTimeout(() => {
+          if (hasilEl.style.visibility !== 'visible') window._ukur && window._ukur('⚠ jaring pengaman 4 dtk: konten dipaksa tampil');
+          hasilEl.style.visibility = 'visible';
+        }, 4000);
       }
 
       // Badge nomor halaman (mis. "٥" atau "Hlm. Mushaf 582") dibuat di
@@ -7776,6 +7783,7 @@ html += `</div>`;
         });
         // Baru sekarang tampilkan semuanya bareng (lihat renderPertamaKali di atas).
         if (renderPertamaKali) hasilEl.style.visibility = 'visible';
+        window._ukur && window._ukur('KONTEN TAMPIL (font siap + basmalah dipas)');
       };
       // requestAnimationFrame ganda SETELAH fonts.ready — memberi browser
       // kesempatan menyelesaikan reflow/rasterisasi glyph ligature yg berat
@@ -7783,7 +7791,7 @@ html += `</div>`;
       // mengukur terlalu dini dan menghasilkan ukuran yg keliru.
       const jadwalkanPasBasmalah = () => requestAnimationFrame(() => requestAnimationFrame(pasBasmalah));
       if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(jadwalkanPasBasmalah);
+        document.fonts.ready.then(() => { window._ukur && window._ukur('  font siap (document.fonts.ready)'); jadwalkanPasBasmalah(); });
       } else {
         setTimeout(jadwalkanPasBasmalah, 300);
       }
@@ -7797,10 +7805,12 @@ html += `</div>`;
       
       updateNavHasil(navList);
         } catch(e) { alert('ERROR: ' + e.message); }
+      window._ukur && window._ukur('  tampilkan: sebelum rapatkan/gabungkan halaman');
       document.querySelectorAll('.input-override-rapat').forEach(inp => {
         if (inp.value.trim()) terapkanRapatkanKata(inp);
       });
       gabungkanHalamanMushafBacaan();
+      window._ukur && window._ukur('  tampilkan: rapatkan + gabungkan halaman selesai');
       setTimeout(() => sembunyikanBorderUjung(), 100);
       // sesuaikanLebarPegon() HARUS nunggu font benar2 siap dulu (sama alasannya
       // spt basmalah di atas) — kalau pakai setTimeout tetap (dulu 800ms), user
@@ -8032,6 +8042,7 @@ html += `</div>`;
     function simpan(bersihkanLama = false) {
       clearTimeout(_simpanTimer);
       _simpanTimer = setTimeout(() => {
+        if (_simpanDitahan) { _simpanMenunggu = true; return; }   // menunggu cek server (cache-first)
         const data = ambilSemuaData();
         simpanDB(data, bersihkanLama).then(() => {
           tampilkanNotifSimpan('tersimpan', false);
@@ -8271,6 +8282,7 @@ html += `</div>`;
     }
 
     function terapkanData(data) {
+      window._ukur && window._ukur('  terapkanData: mulai');
       data = migrasi(data);
       // Bersihkan halaman lama dulu — supaya aman dipanggil berkali-kali
       // (mis. arsitektur hybrid: sekali untuk EMBEDDED_DATA, sekali lagi
@@ -8302,7 +8314,76 @@ html += `</div>`;
       } else {
         tambahHalaman();
       }
+      window._ukur && window._ukur('  terapkanData: halaman selesai dibangun');
       updateTombolHalamanTetap();
+    }
+
+    // ── Cache-first: baca salinan lokal Firestore + cek server di belakang layar ──
+    let _simpanDitahan = false;   // true = autosave ditahan (menunggu cek server)
+    let _simpanMenunggu = false;  // ada simpan() yg tertahan
+    let _konflikServer = false;   // true = server berbeda dari layar & belum diputuskan
+
+    function kanonik(v) {
+      if (Array.isArray(v)) return '[' + v.map(kanonik).join(',') + ']';
+      if (v && typeof v === 'object') {
+        return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + kanonik(v[k])).join(',') + '}';
+      }
+      return JSON.stringify(v === undefined ? null : v);
+    }
+
+    function muatDBCache() {
+      if (!REF_PROFIL) return Promise.resolve(null);
+      return REF_PROFIL.get({ source: 'cache' }).then(profilSnap => {
+        if (!profilSnap.exists) return null;
+        const profil = profilSnap.data();
+        return REF_HALAMAN.get({ source: 'cache' }).then(snap => {
+          const arr = [];
+          snap.forEach(doc => { arr[parseInt(doc.id, 10)] = doc.data(); });
+          const halamanList = arr.filter(h => h !== undefined);
+          // Salinan dianggap sah hanya kalau LENGKAP (jumlah = jumlahHalaman di profil).
+          if (!profil.jumlahHalaman || halamanList.length !== profil.jumlahHalaman || arr.length !== halamanList.length) return null;
+          return Object.assign({}, profil, { halamanList });
+        });
+      }).catch(() => null);
+    }
+
+    function lepasTahanSimpan() {
+      _simpanDitahan = false;
+      _konflikServer = false;
+      if (_simpanMenunggu) { _simpanMenunggu = false; simpan(); }
+    }
+
+    function cekServerSetelahCache(dataCache) {
+      muatDB().then(dataServer => {
+        // dibandingkan di luar alur render supaya tidak menahan tampilan
+        setTimeout(() => {
+          const sama = !!dataServer && kanonik(dataServer) === kanonik(dataCache);
+          window._ukur && window._ukur('cek server: data ' + (sama ? 'SAMA dengan cache' : 'BERBEDA dari cache'));
+          if (sama) lepasTahanSimpan();
+          else { _konflikServer = true; tampilkanBannerKonflikServer(); }
+        }, 0);
+      }).catch(() => { lepasTahanSimpan(); });   // offline / gagal: perilaku seperti biasa
+    }
+
+    function tampilkanBannerKonflikServer() {
+      if (document.getElementById('bannerKonflikServer')) return;
+      const b = document.createElement('div');
+      b.id = 'bannerKonflikServer';
+      b.style.cssText = 'position:fixed;left:8px;right:8px;top:8px;z-index:2147483001;background:#fff3cd;' +
+        'border:1px solid #c9a84c;border-radius:8px;padding:10px 12px;font:13px/1.4 Georgia,serif;' +
+        'color:#5a4010;box-shadow:0 4px 16px rgba(0,0,0,.25);';
+      b.innerHTML = '<div style="margin-bottom:8px;">⚠ Data di server berbeda dari yang tampil di layar ini ' +
+        '(mungkin diedit dari perangkat lain). Penyimpanan otomatis ditahan supaya tidak menimpa data server.</div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+        '<button type="button" id="btnMuatServer" style="flex:1;padding:6px 10px;border:1px solid #a07840;border-radius:6px;background:#c9a84c;color:#fff;font:inherit;">Muat data terbaru<br><small>(ketikan yg belum tersimpan hilang)</small></button>' +
+        '<button type="button" id="btnPakaiLayar" style="flex:1;padding:6px 10px;border:1px solid #c9a84c;border-radius:6px;background:#fbf5e0;color:#5a4010;font:inherit;">Tetap pakai yang di layar<br><small>(menimpa server)</small></button></div>';
+      document.body.appendChild(b);
+      document.getElementById('btnMuatServer').addEventListener('click', () => location.reload());
+      document.getElementById('btnPakaiLayar').addEventListener('click', () => {
+        if (!confirm('Simpan yang di layar dan MENIMPA data di server?')) return;
+        b.remove();
+        lepasTahanSimpan();
+      });
     }
 
     function muat() {
@@ -8318,7 +8399,7 @@ html += `</div>`;
         }).catch(() => {});
         return Promise.resolve(true);
       }
-      return muatDB().then(data => {
+      const jalurServer = () => muatDB().then(data => {
         if (data) {
           terapkanData(data);
           window._ukur && window._ukur('semua kata dibangun (terapkanData)');
@@ -8344,6 +8425,27 @@ html += `</div>`;
         if (!raw) return false;
         try { terapkanData(JSON.parse(raw)); return true; }
         catch { return false; }
+      });
+
+      // ── CACHE-FIRST ────────────────────────────────────────────────
+      // Firestore sudah menyimpan salinan data di HP (IndexedDB). Dulu app
+      // tetap menunggu server (±2-3 dtk) sebelum menampilkan apa pun. Sekarang:
+      // tampilkan dari salinan lokal dulu, lalu cek server di belakang layar.
+      // Selama cek server belum selesai, penyimpanan OTOMATIS ditahan supaya
+      // salinan lama tidak menimpa data yang lebih baru di server.
+      // Kalau salinan lokal tidak ada / tidak lengkap -> jalur lama (server).
+      return muatDBCache().then(dataCache => {
+        if (!dataCache) {
+          window._ukur && window._ukur('cache lokal tidak tersedia -> baca dari server');
+          return jalurServer();
+        }
+        window._ukur && window._ukur('cache lokal dipakai (' + dataCache.halamanList.length + ' halaman)');
+        terapkanData(dataCache);
+        window._ukur && window._ukur('semua kata dibangun dari CACHE (terapkanData)');
+        try { localStorage.removeItem('gandul_data'); } catch (e) {}
+        _simpanDitahan = true;
+        cekServerSetelahCache(dataCache);
+        return true;
       });
     }
 
@@ -8609,7 +8711,7 @@ html += `</div>`;
           if (posisiTersimpan !== null) {
             requestAnimationFrame(() => requestAnimationFrame(() => {
               window.scrollTo({ top: parseInt(posisiTersimpan, 10) || 0 });
-              window._ukur && window._ukur('posisi gulir dipulihkan — SELESAI');
+              window._ukur && window._ukur('posisi gulir dipulihkan');
             }));
           }
         } catch (e) {}
@@ -8698,7 +8800,7 @@ html += `</div>`;
       if (document.visibilityState === 'hidden') {
         simpanDraftPopupEdit();
         clearTimeout(_simpanTimer);
-        simpanDB(ambilSemuaData()).catch(() => {
+        if (!_konflikServer) simpanDB(ambilSemuaData()).catch(() => {
           try { localStorage.setItem('gandul_data', JSON.stringify(ambilSemuaData())); } catch(e) {}
         });
         try { localStorage.setItem('posisiScrollTerakhir', String(window.scrollY)); } catch (e) {}
