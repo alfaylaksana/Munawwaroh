@@ -3996,6 +3996,141 @@ function perbaruiStatusToolbarTasrifan() {
   });
 }
 
+// ============================================================
+// Tempel (paste) ke editor Tasrifan/I'rab/Tashrifan.
+// Dulu semua tempelan dijadikan teks polos, sehingga baris-baris & judul dari
+// Gemini/ChatGPT menyatu jadi SATU paragraf (lalu terbaca RTL semua dan
+// urutan kata Indonesia terlihat kacau). Sekarang struktur ikut terbawa:
+//  - paragraf, judul (dijadikan baris tebal), poin (bernomor -> berbutir),
+//    tebal/miring/garis bawah dipertahankan; tabel jadi baris teks ("a | b");
+//  - jenis huruf, warna, ukuran, gambar, dsb dibuang.
+// ============================================================
+function htmlTempelKeBersih(html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const out = document.createElement('div');
+  let blok = null;        // <p> atau <li> yang sedang diisi
+  let ulAktif = null;     // <ul> yang sedang dibuka
+  let tanpaPecah = 0;     // >0 = di dalam <li>/sel tabel: jangan pecah paragraf
+  const BLOK = new Set(['P','DIV','SECTION','ARTICLE','HEADER','FOOTER','ASIDE','NAV','MAIN','BLOCKQUOTE','PRE','FIGURE','FIGCAPTION','TABLE','THEAD','TBODY','TFOOT','DD','DT','DL','FORM','FIELDSET','ADDRESS']);
+  const ABAIKAN = new Set(['SCRIPT','STYLE','META','TITLE','HEAD','LINK','NOSCRIPT','TEMPLATE','IMG','SVG','CANVAS','VIDEO','AUDIO','IFRAME','OBJECT','BUTTON','INPUT','SELECT','TEXTAREA']);
+
+  const mulaiP = () => { blok = document.createElement('p'); ulAktif = null; out.appendChild(blok); };
+  const bungkus = (tag, node) => { const e = document.createElement(tag); e.appendChild(node); return e; };
+  const tambahTeks = (teks, f) => {
+    const t = teks.replace(/[ \t\r\n\f]+/g, ' ');
+    if (!t.trim() && !blok) return;
+    if (!blok) mulaiP();
+    let node = document.createTextNode(t);
+    if (f.u) node = bungkus('u', node);
+    if (f.i) node = bungkus('i', node);
+    if (f.b) node = bungkus('b', node);
+    blok.appendChild(node);
+  };
+  const gayaBold = (n) => /^(bold|bolder|[6-9]00)$/.test((n.style && n.style.fontWeight) || '');
+  const gayaMiring = (n) => /italic|oblique/.test((n.style && n.style.fontStyle) || '');
+  const gayaGaris = (n) => /underline/.test((n.style && (n.style.textDecorationLine || n.style.textDecoration)) || '');
+  const anak = (n, f) => Array.from(n.childNodes).forEach(c => walk(c, f));
+
+  function walk(n, fmt) {
+    if (n.nodeType === 3) { tambahTeks(n.nodeValue, fmt); return; }
+    if (n.nodeType !== 1) return;
+    const tag = n.tagName;
+    if (ABAIKAN.has(tag)) return;
+    if (tag === 'BR') { if (blok) blok.appendChild(document.createElement('br')); return; }
+    if (tag === 'HR') { if (!tanpaPecah) blok = null; return; }
+    const f = {
+      b: fmt.b || tag === 'B' || tag === 'STRONG' || gayaBold(n),
+      i: fmt.i || tag === 'I' || tag === 'EM' || gayaMiring(n),
+      u: fmt.u || tag === 'U' || gayaGaris(n)
+    };
+    if (/^H[1-6]$/.test(tag)) {
+      if (!tanpaPecah) blok = null;
+      f.b = true;
+      anak(n, f);
+      if (!tanpaPecah) blok = null;
+      return;
+    }
+    if (tag === 'UL' || tag === 'OL') {
+      const dulu = ulAktif;
+      if (!tanpaPecah) blok = null;
+      if (!ulAktif) { ulAktif = document.createElement('ul'); out.appendChild(ulAktif); }
+      anak(n, f);
+      if (!dulu) ulAktif = null;
+      if (!tanpaPecah) blok = null;
+      return;
+    }
+    if (tag === 'LI') {
+      if (!ulAktif) { ulAktif = document.createElement('ul'); out.appendChild(ulAktif); }
+      const li = document.createElement('li');
+      ulAktif.appendChild(li);
+      const blokLama = blok;
+      blok = li;
+      tanpaPecah++;
+      anak(n, f);
+      tanpaPecah--;
+      blok = tanpaPecah > 0 ? blokLama : null;
+      return;
+    }
+    if (tag === 'TR') {
+      if (!tanpaPecah) blok = null;
+      tanpaPecah++;
+      let k = 0;
+      Array.from(n.children).forEach(c => {
+        if (c.tagName === 'TD' || c.tagName === 'TH') {
+          if (k++ > 0) tambahTeks(' | ', f);
+          anak(c, f);
+        }
+      });
+      tanpaPecah--;
+      if (!tanpaPecah) blok = null;
+      return;
+    }
+    if (BLOK.has(tag)) {
+      if (!tanpaPecah) blok = null;
+      else if (blok && blok.textContent && !/\s$/.test(blok.textContent)) blok.appendChild(document.createTextNode(' '));
+      anak(n, f);
+      if (!tanpaPecah) blok = null;
+      return;
+    }
+    anak(n, f);   // span, a, font, dst: hanya teruskan formatnya
+  }
+
+  const akar = doc.body || doc.documentElement;
+  Array.from(akar.childNodes).forEach(c => walk(c, { b: false, i: false, u: false }));
+  out.querySelectorAll('p, li').forEach(el => {
+    if (!el.textContent.trim() && !el.querySelector('br')) el.remove();
+  });
+  out.querySelectorAll('ul').forEach(u => { if (!u.children.length) u.remove(); });
+  let hasil = out.innerHTML;
+  hasil = hasil.replace(/<(p|li)>\s+/g, '<$1>').replace(/\s+<\/(p|li)>/g, '</$1>').replace(/ {2,}/g, ' ');
+  return bersihkanHtmlTasrifan(hasil);
+}
+
+// Tempelan teks polos (mis. dari aplikasi yang tidak menyertakan HTML):
+// satu baris = satu paragraf; "- ", "* ", "• ", "1." di awal baris = poin;
+// "# judul" = baris tebal; **tebal** dipertahankan.
+function teksTempelKeHtml(teks) {
+  const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const inline = (t) => esc(t).replace(/\*\*([^*\n]+?)\*\*/g, '<b>$1</b>');
+  let html = '';
+  let dalamUl = false;
+  String(teks || '').replace(/\r\n?/g, '\n').split('\n').forEach(b0 => {
+    const b = b0.trim();
+    if (!b) { if (dalamUl) { html += '</ul>'; dalamUl = false; } return; }
+    const poin = b.match(/^(?:[-*\u2022\u00B7]|\d+[.)])\s+(.+)$/);
+    if (poin) {
+      if (!dalamUl) { html += '<ul>'; dalamUl = true; }
+      html += '<li>' + inline(poin[1]) + '</li>';
+      return;
+    }
+    if (dalamUl) { html += '</ul>'; dalamUl = false; }
+    const judul = b.match(/^#{1,6}\s+(.+)$/);
+    html += judul ? '<p><b>' + inline(judul[1]) + '</b></p>' : '<p>' + inline(b) + '</p>';
+  });
+  if (dalamUl) html += '</ul>';
+  return html;
+}
+
 function pasangEditorTasrifan() {
   pasangSatuEditorTasrifan(document.getElementById('popupEditTasrifan'));
   pasangSatuEditorTasrifan(document.getElementById('popupEditTashrif'));
@@ -4007,11 +4142,19 @@ function pasangSatuEditorTasrifan(ed) {
     document.execCommand('styleWithCSS', false, false);
     document.execCommand('defaultParagraphSeparator', false, 'p');
   } catch (e) {}
-  // Tempel selalu sebagai teks polos (format dari luar tidak ikut masuk).
+  // Tempel: struktur (paragraf, judul, poin, tebal/miring/garis bawah)
+  // dipertahankan tapi disaring; huruf/warna/ukuran dari luar dibuang.
   ed.addEventListener('paste', (e) => {
     e.preventDefault();
-    const t = (e.clipboardData || window.clipboardData).getData('text/plain');
-    document.execCommand('insertText', false, t);
+    const cd = e.clipboardData || window.clipboardData;
+    if (!cd) return;
+    const html = cd.getData('text/html');
+    const teks = cd.getData('text/plain');
+    let hasil = '';
+    try { hasil = html && html.trim() ? htmlTempelKeBersih(html) : ''; } catch (err) { hasil = ''; }
+    if (!hasil.trim()) hasil = teksTempelKeHtml(teks);
+    if (!hasil.trim()) return;
+    document.execCommand('insertHTML', false, hasil);
   });
   // Arah paragraf (LTR/RTL) dicek 0,3 dtk setelah berhenti mengetik; kotak
   // kosong & placeholder dirapikan seketika. Selama komposisi keyboard
