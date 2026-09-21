@@ -3884,7 +3884,7 @@ function bersihkanHtmlTasrifan(html) {
 function tasrifanKeHtml(nilai) {
   const v = nilai || '';
   if (!v.trim()) return '';
-  if (/<\/?(b|i|u|br|ul|li|p)\b/i.test(v)) return bersihkanHtmlTasrifan(v);
+  if (/<\/?(b|i|u|br|ul|li|p)\b/i.test(v)) return pecahPoinCampuran(bersihkanHtmlTasrifan(v));
   return renderCatatanRapi(v);
 }
 
@@ -3896,9 +3896,69 @@ const RE_HURUF_ARAB = /[\u0621-\u064A\u066E-\u06D3\u06FA-\u06FF\u0750-\u077F\uFB
 const RE_HURUF_LATIN = /[A-Za-z\u00C0-\u024F]/g;
 
 function arahBlokTasrifan(teks) {
-  const a = (teks.match(RE_HURUF_ARAB) || []).length;
-  const l = (teks.match(RE_HURUF_LATIN) || []).length;
+  const t = String(teks || '').trim();
+  // Baris pendek yang diawali huruf Latin (mis. "Isim Fa'il (اسم الفاعل)")
+  // selalu LTR, walau huruf Arabnya lebih banyak.
+  if (t.length <= 60) {
+    const m = t.match(/[A-Za-z\u00C0-\u024F\u0621-\u064A\u066E-\u06D3\u06FA-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/);
+    if (m && /[A-Za-z\u00C0-\u024F]/.test(m[0])) return 'ltr';
+  }
+  const a = (t.match(RE_HURUF_ARAB) || []).length;
+  const l = (t.match(RE_HURUF_LATIN) || []).length;
   return a > l ? 'rtl' : 'ltr';
+}
+
+// Poin yang isinya "judul (Latin) + baris Arab" dipecah: judul tetap jadi poin
+// (LTR), baris Arabnya keluar jadi paragraf sendiri di bawahnya (RTL).
+function pecahPoinCampuran(html) {
+  const tpl = document.createElement('template');
+  tpl.innerHTML = html || '';
+  const hasil = document.createElement('div');
+  let ulAktif = null;
+
+  const barisLi = (li) => {
+    const baris = [[]];
+    const isi = (nodes) => nodes.forEach(n => {
+      if (n.nodeType === 1 && n.tagName === 'BR') { baris.push([]); }
+      else if (n.nodeType === 1 && (n.tagName === 'P' || n.tagName === 'DIV')) {
+        if (baris[baris.length - 1].length) baris.push([]);
+        isi(Array.from(n.childNodes));
+        baris.push([]);
+      } else baris[baris.length - 1].push(n);
+    });
+    isi(Array.from(li.childNodes));
+    return baris.filter(b => b.some(n => (n.textContent || '').trim()));
+  };
+  const teksBaris = (b) => b.map(n => n.textContent || '').join('');
+
+  Array.from(tpl.content.childNodes).forEach(node => {
+    if (!(node.nodeType === 1 && node.tagName === 'UL')) {
+      hasil.appendChild(node);
+      ulAktif = null;
+      return;
+    }
+    ulAktif = null;
+    Array.from(node.children).forEach(li => {
+      if (li.tagName !== 'LI') return;
+      const baris = barisLi(li);
+      const pecah = baris.length >= 2 &&
+        arahBlokTasrifan(teksBaris(baris[0])) === 'ltr' &&
+        baris.slice(1).some(b => arahBlokTasrifan(teksBaris(b)) === 'rtl');
+      if (!ulAktif) { ulAktif = document.createElement('ul'); hasil.appendChild(ulAktif); }
+      if (!pecah) { ulAktif.appendChild(li); return; }
+      const li1 = document.createElement('li');
+      baris[0].forEach(n => li1.appendChild(n));
+      ulAktif.appendChild(li1);
+      ulAktif = null;
+      baris.slice(1).forEach(b => {
+        const par = document.createElement('p');
+        b.forEach(n => par.appendChild(n));
+        hasil.appendChild(par);
+      });
+    });
+  });
+  Array.from(hasil.querySelectorAll('ul')).forEach(u => { if (!u.children.length) u.remove(); });
+  return hasil.innerHTML;
 }
 
 // Teks lepas di luar <p>/<ul>/<div> (mis. baris pertama) dibungkus <p>,
@@ -4015,6 +4075,15 @@ function htmlTempelKeBersih(html) {
   const ABAIKAN = new Set(['SCRIPT','STYLE','META','TITLE','HEAD','LINK','NOSCRIPT','TEMPLATE','IMG','SVG','CANVAS','VIDEO','AUDIO','IFRAME','OBJECT','BUTTON','INPUT','SELECT','TEXTAREA']);
 
   const mulaiP = () => { blok = document.createElement('p'); ulAktif = null; out.appendChild(blok); };
+  // Pemisah antar-blok di DALAM poin: baris baru (<br>); di dalam sel tabel: spasi.
+  const pemisah = () => {
+    if (!blok || !blok.textContent.trim()) return;
+    if (blok.tagName === 'LI') {
+      if (!blok.lastChild || blok.lastChild.nodeName !== 'BR') blok.appendChild(document.createElement('br'));
+    } else if (!/\s$/.test(blok.textContent)) {
+      blok.appendChild(document.createTextNode(' '));
+    }
+  };
   const bungkus = (tag, node) => { const e = document.createElement(tag); e.appendChild(node); return e; };
   const tambahTeks = (teks, f) => {
     const t = teks.replace(/[ \t\r\n\f]+/g, ' ');
@@ -4039,15 +4108,14 @@ function htmlTempelKeBersih(html) {
     if (tag === 'BR') { if (blok) blok.appendChild(document.createElement('br')); return; }
     if (tag === 'HR') { if (!tanpaPecah) blok = null; return; }
     const f = {
-      b: fmt.b || tag === 'B' || tag === 'STRONG' || gayaBold(n),
+      b: false,   // tebal dari sumber luar tidak dibawa (teks dibuat tipis)
       i: fmt.i || tag === 'I' || tag === 'EM' || gayaMiring(n),
       u: fmt.u || tag === 'U' || gayaGaris(n)
     };
     if (/^H[1-6]$/.test(tag)) {
-      if (!tanpaPecah) blok = null;
-      f.b = true;
+      if (!tanpaPecah) blok = null; else pemisah();
       anak(n, f);
-      if (!tanpaPecah) blok = null;
+      if (!tanpaPecah) blok = null; else pemisah();
       return;
     }
     if (tag === 'UL' || tag === 'OL') {
@@ -4086,10 +4154,9 @@ function htmlTempelKeBersih(html) {
       return;
     }
     if (BLOK.has(tag)) {
-      if (!tanpaPecah) blok = null;
-      else if (blok && blok.textContent && !/\s$/.test(blok.textContent)) blok.appendChild(document.createTextNode(' '));
+      if (!tanpaPecah) blok = null; else pemisah();
       anak(n, f);
-      if (!tanpaPecah) blok = null;
+      if (!tanpaPecah) blok = null; else pemisah();
       return;
     }
     anak(n, f);   // span, a, font, dst: hanya teruskan formatnya
@@ -4103,7 +4170,8 @@ function htmlTempelKeBersih(html) {
   out.querySelectorAll('ul').forEach(u => { if (!u.children.length) u.remove(); });
   let hasil = out.innerHTML;
   hasil = hasil.replace(/<(p|li)>\s+/g, '<$1>').replace(/\s+<\/(p|li)>/g, '</$1>').replace(/ {2,}/g, ' ');
-  return bersihkanHtmlTasrifan(hasil);
+  hasil = hasil.replace(/(?:<br>\s*)+<\/li>/g, '</li>').replace(/<li>(?:\s*<br>)+/g, '<li>').replace(/(?:<br>\s*){2,}/g, '<br>');
+  return pecahPoinCampuran(bersihkanHtmlTasrifan(hasil));
 }
 
 // Tempelan teks polos (mis. dari aplikasi yang tidak menyertakan HTML):
@@ -4111,7 +4179,7 @@ function htmlTempelKeBersih(html) {
 // "# judul" = baris tebal; **tebal** dipertahankan.
 function teksTempelKeHtml(teks) {
   const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const inline = (t) => esc(t).replace(/\*\*([^*\n]+?)\*\*/g, '<b>$1</b>');
+  const inline = (t) => esc(t).replace(/\*\*([^*\n]+?)\*\*/g, '$1');   // **tebal** -> teks biasa
   let html = '';
   let dalamUl = false;
   String(teks || '').replace(/\r\n?/g, '\n').split('\n').forEach(b0 => {
@@ -4125,7 +4193,7 @@ function teksTempelKeHtml(teks) {
     }
     if (dalamUl) { html += '</ul>'; dalamUl = false; }
     const judul = b.match(/^#{1,6}\s+(.+)$/);
-    html += judul ? '<p><b>' + inline(judul[1]) + '</b></p>' : '<p>' + inline(b) + '</p>';
+    html += '<p>' + inline(judul ? judul[1] : b) + '</p>';
   });
   if (dalamUl) html += '</ul>';
   return html;
