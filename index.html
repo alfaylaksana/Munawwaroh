@@ -7760,6 +7760,7 @@ html += `</div>`;
         const badge = hal.querySelector('.nomor-halaman-hasil');
         if (badge && hal.firstChild !== badge) hal.insertBefore(badge, hal.firstChild);
       });
+      window._ukur && window._ukur('    ...badge nomor halaman selesai dipindah');
 
       // Basmalah artistik: pas-kan otomatis ke lebar layar (glyph ligature-nya
       // punya lebar tidak proporsional dgn font-size, jadi clamp() CSS saja
@@ -7799,11 +7800,13 @@ html += `</div>`;
       // Syiir tetap di dalam hasil-halaman sesuai posisi DOM (tidak di-appendChild keluar)
       // Posisi render sudah benar karena mengikuti urutan bab dalam halaman
       if (kodeTersembunyi) {
-        hasilEl.querySelectorAll('.kode-wrapper,.kode-kosong,.rujukan-target,.rujukan-dhamir')
-          .forEach(el => el.style.visibility = 'hidden');
+        const elKode = hasilEl.querySelectorAll('.kode-wrapper,.kode-kosong,.rujukan-target,.rujukan-dhamir');
+        elKode.forEach(el => el.style.visibility = 'hidden');
+        window._ukur && window._ukur('    ...' + elKode.length + ' elemen kode i\'rab disembunyikan');
       }
-      
+
       updateNavHasil(navList);
+      window._ukur && window._ukur('    ...updateNavHasil selesai');
         } catch(e) { alert('ERROR: ' + e.message); }
       window._ukur && window._ukur('  tampilkan: sebelum rapatkan/gabungkan halaman');
       document.querySelectorAll('.input-override-rapat').forEach(inp => {
