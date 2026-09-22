@@ -3329,8 +3329,9 @@ body.mode-html-aktif .hasil-kotak {
     if (!document.body) return;
     if (!kotak) {
       kotak = document.createElement('div');
-      kotak.style.cssText = 'position:fixed;left:6px;bottom:6px;z-index:2147483000;max-width:92vw;' +
-        'background:rgba(20,15,5,.9);color:#f5e9c8;font:10px/1.4 monospace;padding:6px 8px;' +
+      kotak.style.cssText = 'position:fixed;left:6px;bottom:6px;z-index:2147483000;max-width:80vw;' +
+        'max-height:38vh;overflow-y:auto;' +
+        'background:rgba(20,15,5,.88);color:#f5e9c8;font:9px/1.35 monospace;padding:5px 7px;' +
         'border-radius:6px;white-space:pre-wrap;word-break:break-word;';
       kotak.addEventListener('click', () => { kotak.remove(); kotak = null; });
       document.body.appendChild(kotak);
@@ -7828,14 +7829,18 @@ html += `</div>`;
       window._ukur && window._ukur('  tampilkan: rapatkan + gabungkan halaman selesai');
       setTimeout(() => sembunyikanBorderUjung(), 100);
       // sesuaikanLebarPegon() HARUS nunggu font benar2 siap dulu (sama alasannya
-      // spt basmalah di atas) — kalau pakai setTimeout tetap (dulu 800ms), user
-      // sempat lihat tampilan "versi awal" (lebar box blm dihitung) sebentar,
-      // baru berubah/menyempit begitu JS jalan — keliatan spt render 2x.
-      if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(() => requestAnimationFrame(() => requestAnimationFrame(sesuaikanLebarPegon)));
-      } else {
-        setTimeout(() => sesuaikanLebarPegon(), 300);
-      }
+      // spt basmalah di atas). TAPI sekadar MENYENTUH document.fonts.ready di
+      // sini juga memaksa browser menghitung ulang tata letak (sama seperti
+      // temuan di basmalah) — jadi aksesnya ditunda selangkah (setTimeout 0)
+      // dulu, supaya konten yang SUDAH tampil tidak ikut tertahan olehnya.
+      window._ukur && window._ukur('    sebelum akses fonts.ready (utk sesuaikanLebarPegon)');
+      setTimeout(() => {
+        if (document.fonts && document.fonts.ready) {
+          document.fonts.ready.then(() => requestAnimationFrame(() => requestAnimationFrame(sesuaikanLebarPegon)));
+        } else {
+          setTimeout(() => sesuaikanLebarPegon(), 300);
+        }
+      }, 0);
 
       setTimeout(() => terapkanOverrideBaris(), 80);
       setTimeout(() => {
