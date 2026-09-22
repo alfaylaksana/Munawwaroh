@@ -7747,15 +7747,16 @@ html += `</div>`;
       hasilEl.innerHTML = html;
       window._ukur && window._ukur('  tampilkan: innerHTML terpasang (parse selesai)');
       hasilEl.dataset.pernahRender = '1';
-      if (renderPertamaKali) {
-        hasilEl.style.visibility = 'hidden';
-        // Jaring pengaman: kalau karena sebab apa pun proses di atas gagal
-        // jalan, jangan sampai layar tersembunyi selamanya.
-        setTimeout(() => {
-          if (hasilEl.style.visibility !== 'visible') window._ukur && window._ukur('⚠ jaring pengaman 4 dtk: konten dipaksa tampil');
-          hasilEl.style.visibility = 'visible';
-        }, 4000);
-      }
+      // Dulu layar disembunyikan sampai basmalah selesai diukur ulang
+      // (butuh document.fonts.ready) — ternyata SEKADAR MEMBACA
+      // document.fonts.ready memaksa browser menghitung tata letak seluruh
+      // halaman yang baru dibangun, dan itu bisa makan 2-3 detik pada
+      // dokumen besar (lihat catatan pengukuran). Akibatnya seluruh layar
+      // tertahan gara-gara satu elemen kecil (basmalah artistik).
+      // Sekarang: layar TIDAK disembunyikan lagi. Basmalah tampil dengan
+      // ukuran perkiraan (CSS clamp()) dulu, lalu dirapikan belakangan
+      // (lihat pasBasmalah di bawah) begitu ada waktu luang.
+      if (renderPertamaKali) { /* sengaja dibiarkan kosong */ }
 
       // Badge nomor halaman (mis. "٥" atau "Hlm. Mushaf 582") dibuat di
       // AKHIR saat generate HTML di atas (lebih gampang programnya), tapi
@@ -7787,23 +7788,26 @@ html += `</div>`;
           }
           el.classList.add('basmalah-siap');
         });
-        // Baru sekarang tampilkan semuanya bareng (lihat renderPertamaKali di atas).
-        if (renderPertamaKali) hasilEl.style.visibility = 'visible';
-        window._ukur && window._ukur('KONTEN TAMPIL (font siap + basmalah dipas)');
+        window._ukur && window._ukur('basmalah dirapikan (KONTEN sudah tampil sejak awal)');
       };
       // requestAnimationFrame ganda SETELAH fonts.ready — memberi browser
       // kesempatan menyelesaikan reflow/rasterisasi glyph ligature yg berat
       // (٭ FDFD) sebelum benar2 diukur, supaya device yg agak lambat tidak
       // mengukur terlalu dini dan menghasilkan ukuran yg keliru.
       const jadwalkanPasBasmalah = () => requestAnimationFrame(() => requestAnimationFrame(pasBasmalah));
-      window._ukur && window._ukur('    sebelum akses document.fonts.ready');
-      if (document.fonts && document.fonts.ready) {
-        window._ukur && window._ukur('    ...document.fonts.ready diakses (getter selesai)');
-        document.fonts.ready.then(() => { window._ukur && window._ukur('  font siap (document.fonts.ready)'); jadwalkanPasBasmalah(); });
-      } else {
-        setTimeout(jadwalkanPasBasmalah, 300);
-      }
-      window._ukur && window._ukur('    sesudah daftar .then() font');
+      // setTimeout(...,0) dulu: memberi browser kesempatan menampilkan &
+      // "bernapas" (paint, dsb) SEBELUM kita sengaja memaksa perhitungan
+      // tata letak lewat document.fonts.ready. Konten sudah kelihatan di
+      // titik ini (lihat perubahan di atas), jadi jeda ini tidak dirasakan
+      // sebagai layar kosong — paling terlihat basmalah sedikit longgar
+      // sesaat sebelum dirapikan.
+      setTimeout(() => {
+        if (document.fonts && document.fonts.ready) {
+          document.fonts.ready.then(jadwalkanPasBasmalah);
+        } else {
+          setTimeout(jadwalkanPasBasmalah, 300);
+        }
+      }, 0);
 
       // Syiir tetap di dalam hasil-halaman sesuai posisi DOM (tidak di-appendChild keluar)
       // Posisi render sudah benar karena mengikuti urutan bab dalam halaman
@@ -8722,7 +8726,7 @@ html += `</div>`;
           if (posisiTersimpan !== null) {
             requestAnimationFrame(() => requestAnimationFrame(() => {
               window.scrollTo({ top: parseInt(posisiTersimpan, 10) || 0 });
-              window._ukur && window._ukur('posisi gulir dipulihkan');
+              window._ukur && window._ukur('posisi gulir dipulihkan — KONTEN TAMPIL');
             }));
           }
         } catch (e) {}
