@@ -3313,49 +3313,7 @@ body.mode-html-aktif .hasil-kotak {
 <script src="https://www.gstatic.com/firebasejs/11.2.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.2.0/firebase-auth-compat.js"></script>
-<script>
-// ⏱ PENGUKUR WAKTU MUAT — SEMENTARA. Untuk melepas: hapus blok <script> ini
-// dan semua baris "window._ukur && window._ukur(...)" di script utama.
-(function () {
-  const baris = [];
-  let kotak = null, timerHapus = null;
-  let jenis = '?';
-  try { const n = performance.getEntriesByType('navigation')[0]; if (n) jenis = n.type; } catch (e) {}
-  const dibuang = document.wasDiscarded ? 'YA (tab dibuang Android)' : 'tidak';
-  let jaringan = '?';
-  try { const c = navigator.connection; if (c) jaringan = (c.effectiveType || '?') + (c.rtt != null ? ', rtt ' + c.rtt + 'ms' : ''); } catch (e) {}
 
-  function gambar() {
-    if (!document.body) return;
-    if (!kotak) {
-      kotak = document.createElement('div');
-      kotak.style.cssText = 'position:fixed;left:6px;bottom:6px;z-index:2147483000;max-width:80vw;' +
-        'max-height:38vh;overflow-y:auto;' +
-        'background:rgba(20,15,5,.88);color:#f5e9c8;font:9px/1.35 monospace;padding:5px 7px;' +
-        'border-radius:6px;white-space:pre-wrap;word-break:break-word;';
-      kotak.addEventListener('click', () => { kotak.remove(); kotak = null; });
-      document.body.appendChild(kotak);
-    }
-    const f = (x) => x.toFixed(2).padStart(5);
-    let teks = '⏱ UKUR MUAT (ketuk = tutup)\n' +
-      'navigasi: ' + jenis + ' | dibuang: ' + dibuang + '\njaringan: ' + jaringan + '\n';
-    baris.forEach(b => { teks += f(b.t) + 's  +' + f(b.d) + '  ' + b.label + '\n'; });
-    kotak.textContent = teks.trimEnd();
-    clearTimeout(timerHapus);
-    timerHapus = setTimeout(() => { if (kotak) { kotak.remove(); kotak = null; } }, 25000);
-  }
-
-  window._ukur = function (label) {
-    if (window._ukurSelesai) return;          // sesudah konten tampil, abaikan penanda berikutnya
-    if (label.indexOf('KONTEN TAMPIL') >= 0) window._ukurSelesai = true;
-    const t = performance.now() / 1000;
-    const sebelum = baris.length ? baris[baris.length - 1].t : 0;
-    baris.push({ t, d: t - sebelum, label });
-    gambar();
-  };
-  window._ukur('skrip eksternal selesai (Firebase, jsPDF, dll)');
-})();
-</script>
 </head>
 
 <body>
@@ -5454,24 +5412,20 @@ function gotoHalamanInput() {
 }
 
     function updateNavHasil(navList) {
-  window._ukur && window._ukur('      [nav] mulai');
   const list = document.getElementById('listNavHasil');
   const total = navList ? navList.length : 0;
   if (!total) {
     list.innerHTML = '<div class="float-drop-item" style="color:#aaa;cursor:default;">Belum ada hasil</div>';
     return;
   }
-  window._ukur && window._ukur('      [nav] cek total (' + total + ' item)');
   // Kalau Mode Bacaan + data mushaf sudah siap, pakai penomoran yg sesuai
   // halaman fisik mushaf ASLI (sadar-gabungan) — bukan sekadar hitungan
   // urut Halaman-app yg bisa nyasar begitu ada Halaman-app yg digabung
   // tampilannya (lihat hitungNomorHalamanBacaan()).
   const nomorMap = (modeBacaanAktif && hitungNomorHalamanBacaan()) || hitungNomorHalaman();
-  window._ukur && window._ukur('      [nav] nomorMap selesai (' + nomorMap.size + ' halaman, modeBacaan=' + !!modeBacaanAktif + ')');
   const semuaNomor = [...nomorMap.values()].map(v => v.nomor).filter(n => n !== null && n !== undefined);
   const maxNomor = semuaNomor.length ? Math.max(...semuaNomor) : total;
   const minNomor = semuaNomor.length ? Math.min(...semuaNomor) : 1;
-  window._ukur && window._ukur('      [nav] min/max nomor dihitung');
   list.innerHTML = `
     <div style="padding:10px 14px;display:flex;align-items:center;gap:6px;">
       <span style="font-size:11px;color:#a07840;white-space:nowrap;">Hlm.</span>
@@ -5483,7 +5437,6 @@ function gotoHalamanInput() {
     </div>
     <div style="padding:2px 14px 6px;font-size:10px;color:#b0a080;font-style:italic;">Total: ${semuaNomor.length ? new Set(semuaNomor).size : maxNomor} halaman</div>
   `;
-  window._ukur && window._ukur('      [nav] list.innerHTML terpasang');
   list._navList = navList;
   setTimeout(() => {
     const inp = document.getElementById('gotoInputHasil');
@@ -7260,7 +7213,7 @@ function terapkanLebarKolom(halEl) {
       let nomorHalIsi = 0;
       let nomorCatatanNahwu = 0;
       const nomorHalamanMap = hitungNomorHalaman();
-      const nomorHalamanMapMushaf = hitungNomorHalamanBacaan(); window._ukur && window._ukur('  tampilkan: nomor halaman dihitung'); // nomor mushaf asli (mulai 582) — khusus badge halaman bab biasa, spy sama antara Mode Kajian & Mode Bacaan
+      const nomorHalamanMapMushaf = hitungNomorHalamanBacaan(); // nomor mushaf asli (mulai 582) — khusus badge halaman bab biasa, spy sama antara Mode Kajian & Mode Bacaan
       if (judulKitab || judulArab) {
         html += `<div class="cover-kitab">
         ${judulArab?`<div class="judul-arab">${judulArab}</div>`:''}
@@ -7744,9 +7697,7 @@ html += `</div>`;
       // ULANG (mis. sedang edit di mode admin) TIDAK disembunyikan, supaya
       // tidak kelap-kelip tiap kali mengetik.
       const renderPertamaKali = hasilEl.dataset.pernahRender !== '1';
-      window._ukur && window._ukur('  tampilkan: HTML dirakit (' + Math.round(html.length / 1024) + ' KB)');
       hasilEl.innerHTML = html;
-      window._ukur && window._ukur('  tampilkan: innerHTML terpasang (parse selesai)');
       hasilEl.dataset.pernahRender = '1';
       // Dulu layar disembunyikan sampai basmalah selesai diukur ulang
       // (butuh document.fonts.ready) — ternyata SEKADAR MEMBACA
@@ -7767,7 +7718,6 @@ html += `</div>`;
         const badge = hal.querySelector('.nomor-halaman-hasil');
         if (badge && hal.firstChild !== badge) hal.insertBefore(badge, hal.firstChild);
       });
-      window._ukur && window._ukur('    ...badge nomor halaman selesai dipindah');
 
       // Basmalah artistik: pas-kan otomatis ke lebar layar (glyph ligature-nya
       // punya lebar tidak proporsional dgn font-size, jadi clamp() CSS saja
@@ -7789,7 +7739,6 @@ html += `</div>`;
           }
           el.classList.add('basmalah-siap');
         });
-        window._ukur && window._ukur('basmalah dirapikan (KONTEN sudah tampil sejak awal)');
       };
       // requestAnimationFrame ganda SETELAH fonts.ready — memberi browser
       // kesempatan menyelesaikan reflow/rasterisasi glyph ligature yg berat
@@ -7815,26 +7764,20 @@ html += `</div>`;
       if (kodeTersembunyi) {
         const elKode = hasilEl.querySelectorAll('.kode-wrapper,.kode-kosong,.rujukan-target,.rujukan-dhamir');
         elKode.forEach(el => el.style.visibility = 'hidden');
-        window._ukur && window._ukur('    ...' + elKode.length + ' elemen kode i\'rab disembunyikan');
       }
 
       updateNavHasil(navList);
-      window._ukur && window._ukur('    ...updateNavHasil selesai');
         } catch(e) { alert('ERROR: ' + e.message); }
-      window._ukur && window._ukur('  tampilkan: sebelum rapatkan/gabungkan halaman');
       document.querySelectorAll('.input-override-rapat').forEach(inp => {
         if (inp.value.trim()) terapkanRapatkanKata(inp);
       });
       gabungkanHalamanMushafBacaan();
-      window._ukur && window._ukur('  tampilkan: rapatkan + gabungkan halaman selesai');
-      window._ukur && window._ukur('◆ KONTEN SUDAH TERLIHAT DI LAYAR (basmalah & lebar Pegon masih dirapikan belakangan)');
       setTimeout(() => sembunyikanBorderUjung(), 100);
       // sesuaikanLebarPegon() HARUS nunggu font benar2 siap dulu (sama alasannya
       // spt basmalah di atas). TAPI sekadar MENYENTUH document.fonts.ready di
       // sini juga memaksa browser menghitung ulang tata letak (sama seperti
       // temuan di basmalah) — jadi aksesnya ditunda selangkah (setTimeout 0)
       // dulu, supaya konten yang SUDAH tampil tidak ikut tertahan olehnya.
-      window._ukur && window._ukur('    sebelum akses fonts.ready (utk sesuaikanLebarPegon)');
       setTimeout(() => {
         if (document.fonts && document.fonts.ready) {
           document.fonts.ready.then(() => requestAnimationFrame(() => requestAnimationFrame(sesuaikanLebarPegon)));
@@ -7964,18 +7907,12 @@ html += `</div>`;
     function muatDB() {
       if (!REF_PROFIL) return Promise.reject(new Error('Firestore tidak tersedia (gagal dimuat).'));
       return REF_PROFIL.get().then(profilSnap => {
-        window._ukur && window._ukur('profil Firestore terbaca (' + (profilSnap.metadata && profilSnap.metadata.fromCache ? 'dari CACHE' : 'dari SERVER') + ')');
         if (!profilSnap.exists) return null; // belum ada data tersimpan
         const profil = profilSnap.data();
         return REF_HALAMAN.get().then(snap => {
           const arr = [];
           snap.forEach(doc => { arr[parseInt(doc.id, 10)] = doc.data(); });
           const halamanList = arr.filter(h => h !== undefined);
-          if (window._ukur) {
-            let kb = '?';
-            try { kb = Math.round(JSON.stringify(halamanList).length / 1024) + ' KB'; } catch (e) {}
-            window._ukur(halamanList.length + ' halaman terbaca, ' + kb + ' (' + (snap.metadata && snap.metadata.fromCache ? 'dari CACHE' : 'dari SERVER') + ')');
-          }
           return Object.assign({}, profil, { halamanList });
         });
       });
@@ -8303,7 +8240,6 @@ html += `</div>`;
     }
 
     function terapkanData(data) {
-      window._ukur && window._ukur('  terapkanData: mulai');
       data = migrasi(data);
       // Bersihkan halaman lama dulu — supaya aman dipanggil berkali-kali
       // (mis. arsitektur hybrid: sekali untuk EMBEDDED_DATA, sekali lagi
@@ -8335,7 +8271,6 @@ html += `</div>`;
       } else {
         tambahHalaman();
       }
-      window._ukur && window._ukur('  terapkanData: halaman selesai dibangun');
       updateTombolHalamanTetap();
     }
 
@@ -8379,7 +8314,6 @@ html += `</div>`;
         // dibandingkan di luar alur render supaya tidak menahan tampilan
         setTimeout(() => {
           const sama = !!dataServer && kanonik(dataServer) === kanonik(dataCache);
-          window._ukur && window._ukur('cek server: data ' + (sama ? 'SAMA dengan cache' : 'BERBEDA dari cache'));
           if (sama) lepasTahanSimpan();
           else { _konflikServer = true; tampilkanBannerKonflikServer(); }
         }, 0);
@@ -8423,7 +8357,6 @@ html += `</div>`;
       const jalurServer = () => muatDB().then(data => {
         if (data) {
           terapkanData(data);
-          window._ukur && window._ukur('semua kata dibangun (terapkanData)');
           // Hapus localStorage lama jika masih ada
           try { localStorage.removeItem('gandul_data'); } catch(e) {}
           return true;
@@ -8457,12 +8390,9 @@ html += `</div>`;
       // Kalau salinan lokal tidak ada / tidak lengkap -> jalur lama (server).
       return muatDBCache().then(dataCache => {
         if (!dataCache) {
-          window._ukur && window._ukur('cache lokal tidak tersedia -> baca dari server');
           return jalurServer();
         }
-        window._ukur && window._ukur('cache lokal dipakai (' + dataCache.halamanList.length + ' halaman)');
         terapkanData(dataCache);
-        window._ukur && window._ukur('semua kata dibangun dari CACHE (terapkanData)');
         try { localStorage.removeItem('gandul_data'); } catch (e) {}
         _simpanDitahan = true;
         cekServerSetelahCache(dataCache);
@@ -8687,7 +8617,6 @@ html += `</div>`;
       if (aktif) window.scrollTo({ top: 0, behavior: 'smooth' });
     }
     function init() {
-      window._ukur && window._ukur('skrip utama dieksekusi, init() mulai');
       initModeAdmin();
       updateLabelModeBaca();
       // Default tiap load: tampilkan SEMUA — Harakat Lengkap, Pegon, Makna Indo (nempel di flag pegonTersembunyi yg sama), dan Kode (2026-09-14, koreksi dari percobaan sebelumnya)
@@ -8702,7 +8631,6 @@ html += `</div>`;
       const togKodeFloat = document.getElementById('togKodeFloat');
       if (togKodeFloat) { togKodeFloat.textContent = 'Sembunyikan Kode'; togKodeFloat.classList.remove('aktif'); }
       Promise.allSettled([muat(), muatDataUthmani()]).then(([hasilMuat]) => {
-        window._ukur && window._ukur('muat() + Uthmani sama-sama selesai (render menunggu ini)');
         const berhasil = hasilMuat.status === 'fulfilled' ? hasilMuat.value : false;
         if (!berhasil) {
           // Dulu di sini ada demo Bismillah bawaan Ar-Risalah — dihapus,
@@ -8714,9 +8642,7 @@ html += `</div>`;
         }
         updateNavInput();
         updateNavHasil([]);
-        window._ukur && window._ukur('mulai tampilkan() — render pertama');
         tampilkan(); // render PERTAMA baru dilakukan setelah data Firestore + Utsmani dua-duanya siap (atau gagal), supaya Mode Bacaan langsung benar sejak awal, tidak perlu render ulang belakangan
-        window._ukur && window._ukur('tampilkan() selesai');
         setTimeout(() => observeHalaman(), 500);
 
         // ── Kembalikan posisi scroll terakhir ────────────────────────
@@ -8732,7 +8658,6 @@ html += `</div>`;
           if (posisiTersimpan !== null) {
             requestAnimationFrame(() => requestAnimationFrame(() => {
               window.scrollTo({ top: parseInt(posisiTersimpan, 10) || 0 });
-              window._ukur && window._ukur('posisi gulir dipulihkan — KONTEN TAMPIL');
             }));
           }
         } catch (e) {}
@@ -8784,7 +8709,6 @@ html += `</div>`;
           const sudahSiapSebelumnya = dataUthmaniSiap;
           data.forEach(a => { petaUthmani[a.surah + ':' + a.ayah] = a.text; });
           dataUthmaniSiap = true;
-          window._ukur && window._ukur('juz30-uthmani.json terunduh & diproses');
           // Kalau ini baru selesai SETELAH batas waktu (render pertama sudah
           // kadung jalan tanpa data ini), render ulang sekali supaya tetap
           // ke-update begitu datanya akhirnya datang.
@@ -8792,9 +8716,8 @@ html += `</div>`;
             if (modeBacaanAktif) tampilkan();
           }
         })
-        .catch(err => { window._ukur && window._ukur('juz30-uthmani.json GAGAL dimuat'); console.warn('Gagal memuat juz30-uthmani.json (Mode Bacaan akan pakai teks input sendiri):', err); });
+        .catch(err => { console.warn('Gagal memuat juz30-uthmani.json (Mode Bacaan akan pakai teks input sendiri):', err); });
       const timeout = new Promise(resolve => setTimeout(() => {
-        if (!dataUthmaniSiap) window._ukur && window._ukur('⚠ batas tunggu 4 dtk Uthmani terlewati (render jalan tanpa itu)');
         resolve();
       }, 4000));
       return Promise.race([fetchData, timeout]);
