@@ -4476,10 +4476,27 @@ function tandaiAktifKataTashrif() {
   });
 }
 
+function ambilSeleksiKeKataTashrif() {
+  const arab = document.getElementById('popupEditArab');
+  const isi = document.getElementById('popupEditKataTashrif');
+  if (!arab || !isi) return;
+  const a = arab.selectionStart, b = arab.selectionEnd;
+  const terpilih = (typeof a === 'number' && typeof b === 'number') ? arab.value.slice(Math.min(a, b), Math.max(a, b)).trim() : '';
+  if (!terpilih) {
+    alert('Sorot dulu sebagian huruf di kotak "Teks Arab" (mis. hanya نوم dari نومكم), baru ketuk tombol ini.');
+    return;
+  }
+  isi.value = terpilih;
+  tandaiAktifKataTashrif();
+  jadwalSimpanDraftPopupEdit();
+}
+
 function pasangPilihanKataTashrif() {
   const wadah = document.getElementById('popupKataTashrifPilihan');
   const arab = document.getElementById('popupEditArab');
   const isi = document.getElementById('popupEditKataTashrif');
+  const tombolSeleksi = document.getElementById('btnAmbilSeleksiKataTashrif');
+  if (tombolSeleksi) tombolSeleksi.addEventListener('click', ambilSeleksiKeKataTashrif);
   if (!wadah || !arab || !isi) return;
   wadah.addEventListener('click', (e) => {
     const b = e.target.closest('button[data-kata]');
@@ -4550,7 +4567,11 @@ function bukaEditPegonInline(event, srcId, draft) {
     ${htmlEditorTasrifan('popupEditTashrif', "tashrifan kata ini (kosongkan bila jamid)...", tasrifanKeHtml(inputTashrif?.value))}
     <label>Kata yang di-tashrif (tampil di atas kartu Tashrifan — kosongkan = frasa lengkap)</label>
     <div id="popupKataTashrifPilihan" class="kata-tashrif-pilihan"></div>
-    <input type="text" id="popupEditKataTashrif" value="${(inputKataTashrif?.value||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" placeholder="نَجْعَلِ" style="direction:rtl;text-align:right;font-size:16px;" />
+    <div style="display:flex;gap:6px;align-items:center;">
+      <input type="text" id="popupEditKataTashrif" value="${(inputKataTashrif?.value||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" placeholder="نَجْعَلِ" style="flex:1;direction:rtl;text-align:right;font-size:16px;" />
+      <button type="button" id="btnAmbilSeleksiKataTashrif" title="Sorot sebagian huruf di Teks Arab (misal hanya نوم dari نومكم), lalu ketuk ini" style="white-space:nowrap;padding:6px 10px;border:1px solid #c9a84c;border-radius:4px;background:#fbf5e0;color:#5a4010;font-size:11px;">✂️ dari seleksi</button>
+    </div>
+    <div style="font-size:10px;color:#a07840;margin-top:2px;">Untuk kata gandeng (mis. نومكم): sorot sebagian huruf di kotak Teks Arab di atas (mis. hanya نوم), lalu ketuk "dari seleksi".</div>
     <div id="popupCatatanToggleWrap" style="${catatanAda ? 'display:none;' : ''}">
       <a href="javascript:void(0)" id="popupCatatanToggle" style="display:inline-block;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:#c9a84c;margin-top:6px;text-decoration:underline;" onclick="document.getElementById('popupCatatanToggleWrap').style.display='none';document.getElementById('popupCatatanWrap').style.display='block';document.getElementById('popupEditCatatan').focus();">+ Tambah catatan</a>
     </div>
