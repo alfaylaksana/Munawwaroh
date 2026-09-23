@@ -3901,7 +3901,14 @@ function bersihkanHtmlTasrifan(html) {
         const t = TASRIFAN_TAG_OK[n.tagName];
         if (t === 'br') { out += '<br>'; return; }
         const isi = salin(n);
-        out += t ? '<' + t + '>' + isi + '</' + t + '>' : isi;
+        if (!t) { out += isi; return; }
+        let attr = '';
+        if (t === 'p' || t === 'ul') {
+          const dir = n.getAttribute('dir');
+          if (dir === 'ltr' || dir === 'rtl') attr += ' dir="' + dir + '"';
+          if (n.getAttribute('data-arah-kunci') === '1') attr += ' data-arah-kunci="1"';
+        }
+        out += '<' + t + attr + '>' + isi + '</' + t + '>';
       }
     });
     return out;
@@ -3965,6 +3972,11 @@ function pecahPoinCampuran(html) {
       ulAktif = null;
       return;
     }
+    if (node.getAttribute('data-arah-kunci') === '1') {   // dikunci manual: biarkan apa adanya
+      hasil.appendChild(node);
+      ulAktif = null;
+      return;
+    }
     ulAktif = null;
     Array.from(node.children).forEach(li => {
       if (li.tagName !== 'LI') return;
@@ -4006,10 +4018,29 @@ function bungkusTeksLepasTasrifan(root) {
 function terapkanArahEditorTasrifan(ed) {
   Array.from(ed.children).forEach(el => {
     if (el.tagName === 'P' || el.tagName === 'UL' || el.tagName === 'DIV') {
+      if (el.getAttribute('data-arah-kunci') === '1') return;   // dikunci manual, jangan ditimpa
       const arah = arahBlokTasrifan(el.textContent);
       if (el.getAttribute('dir') !== arah) el.setAttribute('dir', arah);
     }
   });
+}
+
+// Tombol "balik arah": cari blok (p/ul/div) terdekat dari kursor/seleksi di
+// dalam editor, lalu balik dir-nya dan KUNCI supaya tidak ditimpa otomatis
+// lagi — baik saat mengetik lanjut maupun saat dibuka kembali nanti.
+function balikArahBlokTasrifan(idEditor) {
+  const ed = document.getElementById(idEditor);
+  if (!ed) return;
+  const sel = window.getSelection();
+  let node = (sel && sel.rangeCount) ? sel.getRangeAt(0).startContainer : null;
+  if (node && node.nodeType === 3) node = node.parentElement;
+  let blok = node && ed.contains(node) ? node.closest('p, ul, div') : null;
+  if (!blok || !ed.contains(blok) || blok === ed) blok = ed.firstElementChild;
+  if (!blok) return;
+  const arahBaru = blok.getAttribute('dir') === 'rtl' ? 'ltr' : 'rtl';
+  blok.setAttribute('dir', arahBaru);
+  blok.setAttribute('data-arah-kunci', '1');
+  jadwalSimpanDraftPopupEdit();
 }
 
 function rapikanEditorTasrifan(ed) {
@@ -4044,6 +4075,7 @@ function tasrifanKeHtmlTampil(nilai) {
   tpl.innerHTML = html;
   bungkusTeksLepasTasrifan(tpl.content);
   tpl.content.querySelectorAll('p, ul').forEach(el => {
+    if (el.getAttribute('data-arah-kunci') === '1') return;   // dikunci manual, pakai dir tersimpan
     el.setAttribute('dir', arahBlokTasrifan(el.textContent));
   });
   return tpl.innerHTML;
@@ -4514,9 +4546,11 @@ function pasangPilihanKataTashrif() {
 function htmlEditorTasrifan(idEditor, placeholder, isi) {
   const tb = (cmd, judul, label) => '<button type="button" tabindex="-1" data-cmd="' + cmd + '" title="' + judul +
     '" onmousedown="event.preventDefault()" onclick="formatTasrifan(\'' + cmd + '\',\'' + idEditor + '\')">' + label + '</button>';
+  const btnArah = '<button type="button" tabindex="-1" title="Balik arah LTR/RTL paragraf/daftar di posisi kursor, lalu kunci (tidak akan berubah otomatis lagi)" ' +
+    'onmousedown="event.preventDefault()" onclick="balikArahBlokTasrifan(\'' + idEditor + '\')">&#8646; Arah</button>';
   return '<div class="tasrifan-toolbar" data-editor="' + idEditor + '">' +
     tb('bold', 'Tebal', '<b>B</b>') + tb('italic', 'Miring', '<i>I</i>') +
-    tb('underline', 'Garis bawah', '<u>U</u>') + tb('insertUnorderedList', 'Poin-poin', '&#8226; Poin') +
+    tb('underline', 'Garis bawah', '<u>U</u>') + tb('insertUnorderedList', 'Poin-poin', '&#8226; Poin') + btnArah +
     '</div>' +
     '<div id="' + idEditor + '" class="textarea-catatan-scroll tasrifan-editor" contenteditable="true" data-placeholder="' + placeholder +
     '" style="width:100%;min-height:60px;max-height:160px;overflow-y:auto;border:1px solid #e0d0a0;border-radius:4px;background:transparent;padding:4px 6px;font-family:Georgia,serif;font-size:11px;color:#1a1208;box-sizing:border-box;resize:vertical;">' + isi + '</div>';
