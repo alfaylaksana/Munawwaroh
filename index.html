@@ -4328,6 +4328,7 @@ function pasangSatuEditorTasrifan(ed) {
 // perlu penjelasan dalam) — tombolnya HANYA muncul kalau isinya ada, sama
 // seperti Tashrifan terhadap kata jamid.
 const LABEL_TAMPIL_KAJIAN = { irab: "I'rab", tashrif: 'Tashrif', makna: 'Tafsir' };
+const JUDUL_TAFSIR = 'Tafsir Al-Munawwaroh (تفسير المنورة)';
 
 // HTML berformat (dari editor Tasrifan/Tashrifan) -> teks polos apa adanya,
 // utk dibagikan (Share). Poin jadi "- ", baris/paragraf dipisah baris baru;
@@ -4353,11 +4354,18 @@ function htmlKeTeksPolosBagikan(html) {
 
 // Baris "QS. <nama surat> (<no surat>) : <no ayat>" + sumber — ditambahkan
 // otomatis di bawah tiap konten yang dibagikan.
+// Angka Arab-Indic (٠-٩) -> Latin (0-9), dipakai supaya nomor ayat/surat
+// konsisten dgn footer yg lain (Latin) saat dibagikan.
+const PETA_ANGKA_ARAB = { '٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9' };
+function angkaArabKeLatin(s) {
+  return String(s || '').replace(/[٠-٩]/g, c => PETA_ANGKA_ARAB[c] || c);
+}
+
 function footerBagikanAyat(konteksAyat) {
   if (!konteksAyat) return '(Sumber: Al-Munawwaroh oleh M. Arif Hidayat)';
   const nama = konteksAyat.namaSurahIndo || konteksAyat.namaSurahArab || '';
-  const noSurah = konteksAyat.nomorSurah ? ' (' + konteksAyat.nomorSurah + ')' : '';
-  const noAyat = konteksAyat.nomorAyat ? ' : ' + konteksAyat.nomorAyat : '';
+  const noSurah = konteksAyat.nomorSurah ? ' (' + angkaArabKeLatin(konteksAyat.nomorSurah) + ')' : '';
+  const noAyat = konteksAyat.nomorAyat ? ' : ' + angkaArabKeLatin(konteksAyat.nomorAyat) : '';
   const baris1 = nama ? ('QS. ' + nama + noSurah + noAyat) : '';
   return [baris1, '(Sumber: Al-Munawwaroh oleh M. Arif Hidayat)'].filter(Boolean).join('\n');
 }
@@ -4369,7 +4377,7 @@ function bagikanKartuKajian(tombol) {
   const tampil = kartu.dataset.tampil;
   const isiPer = { irab: d.tasrifan, tashrif: d.tashrif, makna: d.maknaAyat };
   const html = tasrifanKeHtml(isiPer[tampil] || '');
-  const judul = d.arab ? d.arab + '\n\n' : '';
+  const judul = (tampil === 'makna' ? JUDUL_TAFSIR : d.arab) ? (tampil === 'makna' ? JUDUL_TAFSIR : d.arab) + '\n\n' : '';
   const teksIsi = htmlKeTeksPolosBagikan(html);
   const teks = judul + teksIsi + '\n\n' + footerBagikanAyat(d.konteksAyat);
   if (navigator.share) {
@@ -4389,7 +4397,7 @@ function isiKartuKajian(kartu, tampil) {
   // Di tampilan Tashrifan, kata di atas = "kata yang di-tashrif" (bila diisi);
   // di tampilan lain tetap frasa lengkap.
   const kt = (d.kataTashrif || '').trim().replace(/&/g, '&amp;').replace(/</g, '&lt;');
-  const arabTampil = (tampil === 'tashrif' && kt) ? kt : d.arab;
+  const arabTampil = tampil === 'makna' ? JUDUL_TAFSIR : ((tampil === 'tashrif' && kt) ? kt : d.arab);
   const lainnya = tersedia.filter(k => k !== tampil);
   const nav = lainnya.length ? `<div class="kartu-baca-nav">
       <div style="display:flex;gap:4px;">${lainnya.map(k => `<button type="button" class="btn-ganti-kartu" data-tampil="${k}" onclick="gantiTampilanKartuKajian(this)">${LABEL_TAMPIL_KAJIAN[k]}</button>`).join('')}</div>
