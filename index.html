@@ -2908,8 +2908,11 @@ body.mode-html-aktif .hasil-kotak {
 
 .kartu-baca-nilai-catatan {
   font-family: Arial, sans-serif;
-  font-size: 9px;
+  font-size: 10px;   /* dasar/Latin: 9px + 1 */
   text-align: justify;
+}
+.kartu-baca-nilai-catatan [dir="rtl"] {
+  font-size: 11px;   /* blok Arab: 9px + 2 */
 }
 
 .kartu-baca-nilai-catatan ul {
@@ -2987,6 +2990,7 @@ body.mode-html-aktif .hasil-kotak {
 .kartu-baca-aksi {
   display: flex;
   justify-content: flex-end;
+  gap: 6px;
   margin-top: 10px;
   position: sticky;
   bottom: 0;
@@ -3007,6 +3011,12 @@ body.mode-html-aktif .hasil-kotak {
   background: #f5edd5;
   color: #7a5a20;
   border: 1px solid #c9a84c;
+}
+
+.btn-bagikan-kartu {
+  background: #fbf5e0;
+  color: #5a4010;
+  border: 1px solid #d4b87a;
 }
 
 .btn-edit-kartu {
@@ -4317,7 +4327,59 @@ function pasangSatuEditorTasrifan(ed) {
 // Ayat sifatnya jarang (hanya ditulis di kata terakhir ayat, saat memang
 // perlu penjelasan dalam) — tombolnya HANYA muncul kalau isinya ada, sama
 // seperti Tashrifan terhadap kata jamid.
-const LABEL_TAMPIL_KAJIAN = { irab: "I'rab", tashrif: 'Tashrifan', makna: 'Makna Ayat' };
+const LABEL_TAMPIL_KAJIAN = { irab: "I'rab", tashrif: 'Tashrif', makna: 'Tafsir' };
+
+// HTML berformat (dari editor Tasrifan/Tashrifan) -> teks polos apa adanya,
+// utk dibagikan (Share). Poin jadi "- ", baris/paragraf dipisah baris baru;
+// tebal/miring/garis bawah tidak bisa dipertahankan di teks polos, jadi
+// dibuang saja (isi katanya tetap ada).
+function htmlKeTeksPolosBagikan(html) {
+  const tpl = document.createElement('template');
+  tpl.innerHTML = html || '';
+  const baris = [];
+  Array.from(tpl.content.children).forEach(el => {
+    if (el.tagName === 'UL') {
+      Array.from(el.children).forEach(li => {
+        const t = li.textContent.replace(/\u00A0/g, ' ').trim();
+        if (t) baris.push('- ' + t);
+      });
+    } else {
+      const t = el.textContent.replace(/\u00A0/g, ' ').trim();
+      if (t) baris.push(t);
+    }
+  });
+  return baris.join('\n');
+}
+
+// Baris "QS. <nama surat> (<no surat>) : <no ayat>" + sumber — ditambahkan
+// otomatis di bawah tiap konten yang dibagikan.
+function footerBagikanAyat(konteksAyat) {
+  if (!konteksAyat) return '(Sumber: Al-Munawwaroh oleh M. Arif Hidayat)';
+  const nama = konteksAyat.namaSurahIndo || konteksAyat.namaSurahArab || '';
+  const noSurah = konteksAyat.nomorSurah ? ' (' + konteksAyat.nomorSurah + ')' : '';
+  const noAyat = konteksAyat.nomorAyat ? ' : ' + konteksAyat.nomorAyat : '';
+  const baris1 = nama ? ('QS. ' + nama + noSurah + noAyat) : '';
+  return [baris1, '(Sumber: Al-Munawwaroh oleh M. Arif Hidayat)'].filter(Boolean).join('\n');
+}
+
+function bagikanKartuKajian(tombol) {
+  const kartu = tombol.closest('.kartu-baca');
+  if (!kartu || !kartu._dataKajian) return;
+  const d = kartu._dataKajian;
+  const tampil = kartu.dataset.tampil;
+  const isiPer = { irab: d.tasrifan, tashrif: d.tashrif, makna: d.maknaAyat };
+  const html = tasrifanKeHtml(isiPer[tampil] || '');
+  const judul = d.arab ? d.arab + '\n\n' : '';
+  const teksIsi = htmlKeTeksPolosBagikan(html);
+  const teks = judul + teksIsi + '\n\n' + footerBagikanAyat(d.konteksAyat);
+  if (navigator.share) {
+    navigator.share({ text: teks }).catch(() => {});
+  } else if (navigator.clipboard) {
+    navigator.clipboard.writeText(teks).then(() => alert('Teks disalin ke clipboard (berbagi langsung tidak didukung di browser ini).')).catch(() => alert(teks));
+  } else {
+    alert(teks);
+  }
+}
 
 function isiKartuKajian(kartu, tampil) {
   const d = kartu._dataKajian;
@@ -4339,6 +4401,7 @@ function isiKartuKajian(kartu, tampil) {
       ${arabTampil ? `<div class="kartu-baca-arab" style="direction:rtl;">${arabTampil}</div>` : ''}
       <div class="kartu-baca-baris"><div class="kartu-baca-nilai kartu-baca-nilai-catatan">${tasrifanKeHtmlTampil(teks)}</div></div>
       <div class="kartu-baca-aksi">
+        <button type="button" class="btn-bagikan-kartu" onclick="bagikanKartuKajian(this)">📤 Share</button>
         <button type="button" class="btn-tutup-kartu" onclick="document.querySelectorAll('.kartu-baca').forEach(k=>{k._roKartu?.disconnect();k.remove();})">Tutup</button>
       </div>
     `;
@@ -4349,6 +4412,26 @@ function gantiTampilanKartuKajian(tombol) {
   const kartu = tombol.closest('.kartu-baca');
   if (!kartu || !kartu._dataKajian) return;
   isiKartuKajian(kartu, tombol.dataset.tampil);
+}
+
+// Cari nama surat & nomor ayat dari SEMBARANG baris kata (bukan cuma kata
+// akhir ayat) — dipakai utk footer otomatis saat berbagi (share). Nomor ayat
+// = nomor pada .nom-input pertama yg ditemui mulai dari baris ini ke depan
+// (krn nomor ayat baru muncul di kata TERAKHIR ayat itu).
+function cariKonteksAyat(row) {
+  const babEl = row.closest('.bab-input');
+  if (!babEl) return null;
+  const namaSurahArab = (babEl.querySelector('.bab-nama-input')?.value || '').trim();
+  const namaSurahIndo = (babEl.querySelector('.bab-judul-indo')?.value || '').trim();
+  const nomorSurah = (babEl.querySelector('.bab-nomor-surah')?.value || '').trim();
+  const semuaBaris = Array.from(babEl.querySelectorAll('tr')).filter(tr => tr.querySelector('.arab-input, .s-arab'));
+  const idx = semuaBaris.indexOf(row);
+  let nomorAyat = '';
+  for (let i = idx; i >= 0 && i < semuaBaris.length; i++) {
+    const v = (semuaBaris[i]?.querySelector('.nom-input')?.value || '').trim();
+    if (v) { nomorAyat = v; break; }
+  }
+  return { namaSurahArab, namaSurahIndo, nomorSurah, nomorAyat };
 }
 
 function bukaKartuBaca(event, srcId) {
@@ -4367,6 +4450,7 @@ function bukaKartuBaca(event, srcId) {
   const tashrif = (row.querySelector('.tashrif-input') || {}).value || '';
   const kataTashrif = (row.querySelector('.kata-tashrif-input') || {}).value || '';
   const maknaAyat = (row.querySelector('.makna-ayat-input') || {}).value || '';
+  const konteksAyat = cariKonteksAyat(row);
 
   // Mode Kajian: info dasar (Pegon/Indo/Kode) sudah kelihatan langsung di layar,
   // jadi popup di sini KHUSUS utk Tasrifan & I'rab — kalau kata itu blm diisi
@@ -4375,7 +4459,7 @@ function bukaKartuBaca(event, srcId) {
     if (!tasrifan.trim() && !tashrif.trim() && !maknaAyat.trim()) return;
     const kartuKajian = document.createElement('div');
     kartuKajian.className = 'kartu-baca';
-    kartuKajian._dataKajian = { arab, tasrifan, tashrif, kataTashrif, maknaAyat };
+    kartuKajian._dataKajian = { arab, tasrifan, tashrif, kataTashrif, maknaAyat, konteksAyat };
     const awal = tasrifan.trim() ? 'irab' : (tashrif.trim() ? 'tashrif' : 'makna');
     isiKartuKajian(kartuKajian, awal);
     document.body.appendChild(kartuKajian);
@@ -4613,7 +4697,7 @@ function bukaEditPegonInline(event, srcId, draft) {
     <input type="text" id="popupEditJawa" value="${(inputJawa.value||'').replace(/"/g,'&quot;')}" placeholder="tegese..." />
     <label>I'rab (ditampilkan di popup Mode Kajian)</label>
     ${htmlEditorTasrifan('popupEditTasrifan', "i'rab kata ini...", tasrifanKeHtml(inputTasrifan?.value))}
-    <label>Tashrifan (tombol "Tashrifan" di popup Mode Kajian — kosongkan bila kata jamid)</label>
+    <label>Tashrifan (tombol "Tashrif" di popup Mode Kajian — kosongkan bila kata jamid)</label>
     ${htmlEditorTasrifan('popupEditTashrif', "tashrifan kata ini (kosongkan bila jamid)...", tasrifanKeHtml(inputTashrif?.value))}
     <label>Kata yang di-tashrif (tampil di atas kartu Tashrifan — kosongkan = frasa lengkap)</label>
     <div id="popupKataTashrifPilihan" class="kata-tashrif-pilihan"></div>
@@ -4622,7 +4706,7 @@ function bukaEditPegonInline(event, srcId, draft) {
       <button type="button" id="btnAmbilSeleksiKataTashrif" title="Sorot sebagian huruf di Teks Arab (misal hanya نوم dari نومكم), lalu ketuk ini" style="white-space:nowrap;padding:6px 10px;border:1px solid #c9a84c;border-radius:4px;background:#fbf5e0;color:#5a4010;font-size:11px;">✂️ dari seleksi</button>
     </div>
     <div style="font-size:10px;color:#a07840;margin-top:2px;">Untuk kata gandeng (mis. نومكم): sorot sebagian huruf di kotak Teks Arab di atas (mis. hanya نوم), lalu ketuk "dari seleksi".</div>
-    ${akhirAyat ? `<label>Makna/Pengertian Ayat (opsional — hanya utk penjelasan yg dalam; tombol "Makna Ayat" di popup Mode Kajian. Kalau menyambung dari ayat sebelumnya, tulis semua di sini)</label>
+    ${akhirAyat ? `<label>Makna/Pengertian Ayat (opsional — hanya utk penjelasan yg dalam; tombol "Tafsir" di popup Mode Kajian. Kalau menyambung dari ayat sebelumnya, tulis semua di sini)</label>
     ${htmlEditorTasrifan('popupEditMaknaAyat', "makna/pengertian ayat ini (kosongkan bila tidak perlu)...", tasrifanKeHtml(inputMaknaAyat?.value))}` : ''}
     <div id="popupCatatanToggleWrap" style="${catatanAda ? 'display:none;' : ''}">
       <a href="javascript:void(0)" id="popupCatatanToggle" style="display:inline-block;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:#c9a84c;margin-top:6px;text-decoration:underline;" onclick="document.getElementById('popupCatatanToggleWrap').style.display='none';document.getElementById('popupCatatanWrap').style.display='block';document.getElementById('popupEditCatatan').focus();">+ Tambah catatan</a>
