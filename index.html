@@ -2875,6 +2875,25 @@ body.mode-html-aktif .hasil-kotak {
   padding: 6px 0 8px;
 }
 
+.kartu-tafsir-nama {
+  font-family: Georgia, serif;
+  font-weight: normal;
+  font-size: 14px;   /* kira-kira sama besar dgn kutipan ayat (11px tafsir + 3) */
+  text-align: left;
+  direction: ltr;
+  color: #5a4010;
+  padding: 4px 0 0;
+}
+
+.kartu-tafsir-ayat {
+  font-family: 'AmiriQuran', 'Scheherazade New', serif;
+  font-size: 14px;   /* tafsir (11px) + 3 */
+  direction: rtl;
+  text-align: center;
+  color: #1a1208;
+  padding: 2px 0 8px;
+}
+
 .kartu-baca-baris {
   display: block;
   padding: 5px 0;
@@ -4328,7 +4347,15 @@ function pasangSatuEditorTasrifan(ed) {
 // perlu penjelasan dalam) — tombolnya HANYA muncul kalau isinya ada, sama
 // seperti Tashrifan terhadap kata jamid.
 const LABEL_TAMPIL_KAJIAN = { irab: "I'rab", tashrif: 'Tashrif', makna: 'Tafsir' };
-const JUDUL_TAFSIR = 'Tafsir Al-Munawwaroh (تفسير المنورة)';
+const JUDUL_TAFSIR = 'Tafsir Al-Munawwaroh';
+
+// Kutipan ayat yg sedang ditafsiri, format: "<ayat lengkap+harakat> (<nama surat Arab>: <no ayat>)".
+function kutipanAyatTafsir(konteksAyat) {
+  if (!konteksAyat || !konteksAyat.teksAyatLengkap) return '';
+  const sumber = konteksAyat.namaSurahArab && konteksAyat.nomorAyat
+    ? ' (' + konteksAyat.namaSurahArab + ': ' + konteksAyat.nomorAyat + ')' : '';
+  return konteksAyat.teksAyatLengkap + sumber;
+}
 
 // HTML berformat (dari editor Tasrifan/Tashrifan) -> teks polos apa adanya,
 // utk dibagikan (Share). Poin jadi "- ", baris/paragraf dipisah baris baru;
@@ -4362,12 +4389,12 @@ function angkaArabKeLatin(s) {
 }
 
 function footerBagikanAyat(konteksAyat) {
-  if (!konteksAyat) return '(Sumber: Al-Munawwaroh oleh M. Arif Hidayat)';
+  if (!konteksAyat) return '(Sumber : Tafsir Al-Munawwaroh, oleh M. Arif Hidayat)';
   const nama = konteksAyat.namaSurahIndo || konteksAyat.namaSurahArab || '';
   const noSurah = konteksAyat.nomorSurah ? ' (' + angkaArabKeLatin(konteksAyat.nomorSurah) + ')' : '';
   const noAyat = konteksAyat.nomorAyat ? ' : ' + angkaArabKeLatin(konteksAyat.nomorAyat) : '';
   const baris1 = nama ? ('QS. ' + nama + noSurah + noAyat) : '';
-  return [baris1, '(Sumber: Al-Munawwaroh oleh M. Arif Hidayat)'].filter(Boolean).join('\n');
+  return [baris1, '(Sumber : Tafsir Al-Munawwaroh, oleh M. Arif Hidayat)'].filter(Boolean).join('\n');
 }
 
 function bagikanKartuKajian(tombol) {
@@ -4377,7 +4404,13 @@ function bagikanKartuKajian(tombol) {
   const tampil = kartu.dataset.tampil;
   const isiPer = { irab: d.tasrifan, tashrif: d.tashrif, makna: d.maknaAyat };
   const html = tasrifanKeHtml(isiPer[tampil] || '');
-  const judul = (tampil === 'makna' ? JUDUL_TAFSIR : d.arab) ? (tampil === 'makna' ? JUDUL_TAFSIR : d.arab) + '\n\n' : '';
+  let judul;
+  if (tampil === 'makna') {
+    const kutipan = kutipanAyatTafsir(d.konteksAyat);
+    judul = JUDUL_TAFSIR + (kutipan ? '\n' + kutipan : '') + '\n\n';
+  } else {
+    judul = d.arab ? d.arab + '\n\n' : '';
+  }
   const teksIsi = htmlKeTeksPolosBagikan(html);
   const teks = judul + teksIsi + '\n\n' + footerBagikanAyat(d.konteksAyat);
   if (navigator.share) {
@@ -4397,7 +4430,11 @@ function isiKartuKajian(kartu, tampil) {
   // Di tampilan Tashrifan, kata di atas = "kata yang di-tashrif" (bila diisi);
   // di tampilan lain tetap frasa lengkap.
   const kt = (d.kataTashrif || '').trim().replace(/&/g, '&amp;').replace(/</g, '&lt;');
-  const arabTampil = tampil === 'makna' ? JUDUL_TAFSIR : ((tampil === 'tashrif' && kt) ? kt : d.arab);
+  const arabTampil = (tampil === 'tashrif' && kt) ? kt : d.arab;
+  const kutipanAyat = tampil === 'makna' ? kutipanAyatTafsir(d.konteksAyat) : '';
+  const judulHtml = tampil === 'makna'
+    ? `<div class="kartu-tafsir-nama">${JUDUL_TAFSIR}</div>${kutipanAyat ? `<div class="kartu-tafsir-ayat">${kutipanAyat}</div>` : ''}`
+    : (arabTampil ? `<div class="kartu-baca-arab" style="direction:rtl;">${arabTampil}</div>` : '');
   const lainnya = tersedia.filter(k => k !== tampil);
   const nav = lainnya.length ? `<div class="kartu-baca-nav">
       <div style="display:flex;gap:4px;">${lainnya.map(k => `<button type="button" class="btn-ganti-kartu" data-tampil="${k}" onclick="gantiTampilanKartuKajian(this)">${LABEL_TAMPIL_KAJIAN[k]}</button>`).join('')}</div>
@@ -4406,10 +4443,10 @@ function isiKartuKajian(kartu, tampil) {
   kartu.dataset.tampil = tampil;
   kartu.innerHTML = `
       ${nav}
-      ${arabTampil ? `<div class="kartu-baca-arab" style="direction:rtl;">${arabTampil}</div>` : ''}
+      ${judulHtml}
       <div class="kartu-baca-baris"><div class="kartu-baca-nilai kartu-baca-nilai-catatan">${tasrifanKeHtmlTampil(teks)}</div></div>
       <div class="kartu-baca-aksi">
-        <button type="button" class="btn-bagikan-kartu" onclick="bagikanKartuKajian(this)">📤 Share</button>
+        <button type="button" class="btn-bagikan-kartu" onclick="bagikanKartuKajian(this)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px;"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>Share</button>
         <button type="button" class="btn-tutup-kartu" onclick="document.querySelectorAll('.kartu-baca').forEach(k=>{k._roKartu?.disconnect();k.remove();})">Tutup</button>
       </div>
     `;
@@ -4434,12 +4471,23 @@ function cariKonteksAyat(row) {
   const nomorSurah = (babEl.querySelector('.bab-nomor-surah')?.value || '').trim();
   const semuaBaris = Array.from(babEl.querySelectorAll('tr')).filter(tr => tr.querySelector('.arab-input, .s-arab'));
   const idx = semuaBaris.indexOf(row);
-  let nomorAyat = '';
+  let nomorAyat = '', idxAkhir = -1;
   for (let i = idx; i >= 0 && i < semuaBaris.length; i++) {
     const v = (semuaBaris[i]?.querySelector('.nom-input')?.value || '').trim();
-    if (v) { nomorAyat = v; break; }
+    if (v) { nomorAyat = v; idxAkhir = i; break; }
   }
-  return { namaSurahArab, namaSurahIndo, nomorSurah, nomorAyat };
+  // Teks ayat lengkap: dari kata setelah akhir ayat SEBELUMNYA, sampai akhir ayat ini.
+  let teksAyatLengkap = '';
+  if (idxAkhir >= 0) {
+    let idxAwal = 0;
+    for (let i = idxAkhir - 1; i >= 0; i--) {
+      if ((semuaBaris[i]?.querySelector('.nom-input')?.value || '').trim()) { idxAwal = i + 1; break; }
+    }
+    teksAyatLengkap = semuaBaris.slice(idxAwal, idxAkhir + 1)
+      .map(tr => (tr.querySelector('.arab-input, .s-arab')?.value || '').trim())
+      .filter(Boolean).join(' ');
+  }
+  return { namaSurahArab, namaSurahIndo, nomorSurah, nomorAyat, teksAyatLengkap };
 }
 
 function bukaKartuBaca(event, srcId) {
