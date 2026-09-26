@@ -2878,7 +2878,7 @@ body.mode-html-aktif .hasil-kotak {
 .kartu-tafsir-nama {
   font-family: Georgia, serif;
   font-weight: normal;
-  font-size: 14px;   /* kira-kira sama besar dgn kutipan ayat (11px tafsir + 3) */
+  font-size: 13px;
   text-align: left;
   direction: ltr;
   color: #5a4010;
@@ -4352,9 +4352,15 @@ const JUDUL_TAFSIR = 'Tafsir Al-Munawwaroh';
 // Kutipan ayat yg sedang ditafsiri, format: "<ayat lengkap+harakat> (<nama surat Arab>: <no ayat>)".
 function kutipanAyatTafsir(konteksAyat) {
   if (!konteksAyat || !konteksAyat.teksAyatLengkap) return '';
-  const sumber = konteksAyat.namaSurahArab && konteksAyat.nomorAyat
-    ? ' (' + konteksAyat.namaSurahArab + ': ' + konteksAyat.nomorAyat + ')' : '';
-  return konteksAyat.teksAyatLengkap + sumber;
+  // Tampil semampunya (nama+nomor surat+nomor ayat) walau ada field yg kosong
+  // — supaya sumbernya tetap tertera di layar meski tdk lewat tombol Share
+  // (mis. orang lain ambil dg screenshot langsung).
+  const nama = (konteksAyat.namaSurahArab || konteksAyat.namaSurahIndo || '').trim();
+  const noSurah = (konteksAyat.nomorSurah || '').trim();
+  const noAyat = (konteksAyat.nomorAyat || '').trim();
+  const namaLengkap = [nama, noSurah].filter(Boolean).join(' ');
+  const dalamKurung = [namaLengkap, noAyat].filter(Boolean).join(': ');
+  return konteksAyat.teksAyatLengkap + (dalamKurung ? ' (' + dalamKurung + ')' : '');
 }
 
 // HTML berformat (dari editor Tasrifan/Tashrifan) -> teks polos apa adanya,
