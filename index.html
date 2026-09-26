@@ -4356,7 +4356,7 @@ function kutipanAyatTafsir(konteksAyat) {
   // — supaya sumbernya tetap tertera di layar meski tdk lewat tombol Share
   // (mis. orang lain ambil dg screenshot langsung).
   const nama = (konteksAyat.namaSurahArab || konteksAyat.namaSurahIndo || '').trim();
-  const noSurah = (konteksAyat.nomorSurah || '').trim();
+  const noSurah = angkaLatinKeArab((konteksAyat.nomorSurah || '').trim());
   const noAyat = (konteksAyat.nomorAyat || '').trim();
   const namaLengkap = [nama, noSurah].filter(Boolean).join(' ');
   const dalamKurung = [namaLengkap, noAyat].filter(Boolean).join(': ');
@@ -4390,8 +4390,12 @@ function htmlKeTeksPolosBagikan(html) {
 // Angka Arab-Indic (٠-٩) -> Latin (0-9), dipakai supaya nomor ayat/surat
 // konsisten dgn footer yg lain (Latin) saat dibagikan.
 const PETA_ANGKA_ARAB = { '٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9' };
+const PETA_ANGKA_LATIN = { '0':'٠','1':'١','2':'٢','3':'٣','4':'٤','5':'٥','6':'٦','7':'٧','8':'٨','9':'٩' };
 function angkaArabKeLatin(s) {
   return String(s || '').replace(/[٠-٩]/g, c => PETA_ANGKA_ARAB[c] || c);
+}
+function angkaLatinKeArab(s) {
+  return String(s || '').replace(/[0-9]/g, c => PETA_ANGKA_LATIN[c] || c);
 }
 
 function footerBagikanAyat(konteksAyat) {
@@ -4472,9 +4476,13 @@ function gantiTampilanKartuKajian(tombol) {
 function cariKonteksAyat(row) {
   const babEl = row.closest('.bab-input');
   if (!babEl) return null;
-  const namaSurahArab = (babEl.querySelector('.bab-nama-input')?.value || '').trim();
-  const namaSurahIndo = (babEl.querySelector('.bab-judul-indo')?.value || '').trim();
   const nomorSurah = (babEl.querySelector('.bab-nomor-surah')?.value || '').trim();
+  // Sumber utama nama surat = tabel JUZ30_SURAH_INFO (berdasar nomor surat) —
+  // selalu ada & tdk bergantung isian manual per-bab (bab lanjutan pd surat
+  // panjang yg terpotong ke halaman berikutnya kerap tdk mengisi ulang nama).
+  const infoSurah = JUZ30_SURAH_INFO[parseInt(nomorSurah, 10)];
+  const namaSurahArab = infoSurah?.arab || (babEl.querySelector('.bab-nama-input')?.value || '').trim();
+  const namaSurahIndo = infoSurah?.indo || (babEl.querySelector('.bab-judul-indo')?.value || '').trim();
   const semuaBaris = Array.from(babEl.querySelectorAll('tr')).filter(tr => tr.querySelector('.arab-input, .s-arab'));
   const idx = semuaBaris.indexOf(row);
   let nomorAyat = '', idxAkhir = -1;
