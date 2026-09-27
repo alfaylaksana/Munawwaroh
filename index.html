@@ -4496,11 +4496,23 @@ function cariKonteksAyat(row) {
     const v = (semuaBaris[i]?.querySelector('.nom-input')?.value || '').trim();
     if (v) { nomorAyat = v; idxAkhir = i; break; }
   }
-  // Berapa ayat dicakup (utk Tafsir yg menyambung >1 ayat pendek, diisi di kata
+  // Rentang ayat dicakup (utk Tafsir yg menyambung >1 ayat pendek, diisi di kata
   // akhir ayat TERAKHIR dari kelompoknya — lihat .makna-ayat-jumlah-input).
-  // Default 1 = perilaku lama (hanya ayat ini sendiri).
-  const jumlahRaw = parseInt((row.querySelector('.makna-ayat-jumlah-input')?.value || '').trim(), 10);
-  const jumlahAyat = (jumlahRaw && jumlahRaw >= 1) ? jumlahRaw : 1;
+  // Terima dua format: "30-32" (rentang langsung) atau "3" (jumlah ayat saja).
+  // Kosong/tak valid = 1 (perilaku lama, hanya ayat ini sendiri).
+  const isiJumlah = angkaArabKeLatin((row.querySelector('.makna-ayat-jumlah-input')?.value || '').trim());
+  let jumlahAyat = 1;
+  const cocokRentang = isiJumlah.match(/^(\d+)\s*-\s*(\d+)$/);
+  if (cocokRentang) {
+    const a = parseInt(cocokRentang[1], 10), b = parseInt(cocokRentang[2], 10);
+    if (a >= 1 && b >= 1) jumlahAyat = Math.abs(b - a) + 1;
+  } else {
+    const cocokAngka = isiJumlah.match(/^(\d+)$/);
+    if (cocokAngka) {
+      const n = parseInt(cocokAngka[1], 10);
+      if (n >= 1) jumlahAyat = n;
+    }
+  }
 
   // Teks ayat lengkap: dari kata setelah akhir ayat SEBELUM rentang, sampai
   // akhir ayat ini. nomorAyatAwal = nomor ayat PERTAMA dlm rentang (utk kutipan
@@ -4806,8 +4818,8 @@ function bukaEditPegonInline(event, srcId, draft) {
     <div style="font-size:10px;color:#a07840;margin-top:2px;">Untuk kata gandeng (mis. نومكم): sorot sebagian huruf di kotak Teks Arab di atas (mis. hanya نوم), lalu ketuk "dari seleksi".</div>
     ${akhirAyat ? `<label>Makna/Pengertian Ayat (opsional — hanya utk penjelasan yg dalam; tombol "Tafsir" di popup Mode Kajian. Kalau menyambung dari ayat sebelumnya, tulis semua di sini)</label>
     ${htmlEditorTasrifan('popupEditMaknaAyat', "makna/pengertian ayat ini (kosongkan bila tidak perlu)...", tasrifanKeHtml(inputMaknaAyat?.value))}
-    <label>Mencakup berapa ayat (termasuk ayat ini)? (kosongkan/1 = hanya ayat ini; kutipan otomatis jadi rentang, mis. "30-32")</label>
-    <input type="number" min="1" id="popupEditMaknaAyatJumlah" value="${(inputMaknaAyatJumlah?.value||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" placeholder="1" style="width:70px;font-size:14px;" />` : ''}
+    <label>Rentang ayat yg dicakup (kosongkan = hanya ayat ini). Ketik spt "30-32", atau boleh juga cukup angka jumlahnya spt "3"</label>
+    <input type="text" inputmode="numeric" id="popupEditMaknaAyatJumlah" value="${(inputMaknaAyatJumlah?.value||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" placeholder="30-32" style="width:110px;font-size:14px;direction:ltr;" />` : ''}
     <div id="popupCatatanToggleWrap" style="${catatanAda ? 'display:none;' : ''}">
       <a href="javascript:void(0)" id="popupCatatanToggle" style="display:inline-block;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:#c9a84c;margin-top:6px;text-decoration:underline;" onclick="document.getElementById('popupCatatanToggleWrap').style.display='none';document.getElementById('popupCatatanWrap').style.display='block';document.getElementById('popupEditCatatan').focus();">+ Tambah catatan</a>
     </div>
