@@ -3586,6 +3586,10 @@ body.mode-html-aktif .hasil-kotak {
     // arti Indo, jumlah ayat, tipe (makkiyah/madaniyah). Dipakai Daftar Isi Juz 30 —
     // jumlah ayat & tipe TIDAK dihitung dari data, karena ini fakta baku Al-Qur'an.
     const JUZ30_SURAH_INFO = {
+      36:{arab:'يٰسٓ', indo:'Yasin', arti:'Yaa Siin', ayat:83, tipe:'makkiyah'},
+      55:{arab:'الرَّحۡمٰنُ', indo:'Ar-Rahman', arti:'Yang Maha Pengasih', ayat:78, tipe:'madaniyah'},
+      56:{arab:'الۡوَاقِعَةُ', indo:"Al-Waqi'ah", arti:'Hari Kiamat', ayat:96, tipe:'makkiyah'},
+      67:{arab:'الۡمُلۡكُ', indo:'Al-Mulk', arti:'Kerajaan', ayat:30, tipe:'makkiyah'},
       78:{arab:'النَّبَأُ', indo:"An-Naba'", arti:'Berita Besar', ayat:40, tipe:'makkiyah'},
       79:{arab:'النَّازِعَاتُ', indo:"An-Nazi'at", arti:'Malaikat yang Mencabut', ayat:46, tipe:'makkiyah'},
       80:{arab:'عَبَسَ', indo:"'Abasa", arti:'Ia Bermuka Masam', ayat:42, tipe:'makkiyah'},
@@ -4358,8 +4362,10 @@ function kutipanAyatTafsir(konteksAyat) {
   const nama = (konteksAyat.namaSurahArab || konteksAyat.namaSurahIndo || '').trim();
   const noSurah = angkaLatinKeArab((konteksAyat.nomorSurah || '').trim());
   const noAyat = (konteksAyat.nomorAyat || '').trim();
+  const noAyatAwal = (konteksAyat.nomorAyatAwal || '').trim();
+  const rentangAyat = (noAyatAwal && noAyatAwal !== noAyat) ? (noAyatAwal + '-' + noAyat) : noAyat;
   const namaLengkap = [nama, noSurah].filter(Boolean).join(' ');
-  const dalamKurung = [namaLengkap, noAyat].filter(Boolean).join(': ');
+  const dalamKurung = [namaLengkap, rentangAyat].filter(Boolean).join(': ');
   return konteksAyat.teksAyatLengkap + (dalamKurung ? ' (' + dalamKurung + ')' : '');
 }
 
@@ -4490,18 +4496,36 @@ function cariKonteksAyat(row) {
     const v = (semuaBaris[i]?.querySelector('.nom-input')?.value || '').trim();
     if (v) { nomorAyat = v; idxAkhir = i; break; }
   }
-  // Teks ayat lengkap: dari kata setelah akhir ayat SEBELUMNYA, sampai akhir ayat ini.
-  let teksAyatLengkap = '';
+  // Berapa ayat dicakup (utk Tafsir yg menyambung >1 ayat pendek, diisi di kata
+  // akhir ayat TERAKHIR dari kelompoknya — lihat .makna-ayat-jumlah-input).
+  // Default 1 = perilaku lama (hanya ayat ini sendiri).
+  const jumlahRaw = parseInt((row.querySelector('.makna-ayat-jumlah-input')?.value || '').trim(), 10);
+  const jumlahAyat = (jumlahRaw && jumlahRaw >= 1) ? jumlahRaw : 1;
+
+  // Teks ayat lengkap: dari kata setelah akhir ayat SEBELUM rentang, sampai
+  // akhir ayat ini. nomorAyatAwal = nomor ayat PERTAMA dlm rentang (utk kutipan
+  // "30-32"; sama dgn nomorAyat kalau jumlahAyat=1).
+  let teksAyatLengkap = '', nomorAyatAwal = '';
   if (idxAkhir >= 0) {
     let idxAwal = 0;
+    let sisaLangkah = jumlahAyat - 1;   // brp batas ayat SEBELUMNYA lg yg perlu dilewati
     for (let i = idxAkhir - 1; i >= 0; i--) {
-      if ((semuaBaris[i]?.querySelector('.nom-input')?.value || '').trim()) { idxAwal = i + 1; break; }
+      const v = (semuaBaris[i]?.querySelector('.nom-input')?.value || '').trim();
+      if (v) {
+        if (sisaLangkah <= 0) { idxAwal = i + 1; break; }
+        sisaLangkah--;
+      }
+      if (i === 0) idxAwal = 0;   // habis sampai awal bab: cakup dari kata pertama yg ada
     }
     teksAyatLengkap = semuaBaris.slice(idxAwal, idxAkhir + 1)
       .map(tr => (tr.querySelector('.arab-input, .s-arab')?.value || '').trim())
       .filter(Boolean).join(' ');
+    for (let i = idxAwal; i <= idxAkhir; i++) {
+      const v = (semuaBaris[i]?.querySelector('.nom-input')?.value || '').trim();
+      if (v) { nomorAyatAwal = v; break; }
+    }
   }
-  return { namaSurahArab, namaSurahIndo, nomorSurah, nomorAyat, teksAyatLengkap };
+  return { namaSurahArab, namaSurahIndo, nomorSurah, nomorAyat, nomorAyatAwal, teksAyatLengkap };
 }
 
 function bukaKartuBaca(event, srcId) {
@@ -4582,6 +4606,7 @@ function simpanDraftPopupEdit() {
     tashrif: ambilTasrifanDariEditor('popupEditTashrif'),
     kataTashrif: g('popupEditKataTashrif'),
     maknaAyat: document.getElementById('popupEditMaknaAyat') ? ambilTasrifanDariEditor('popupEditMaknaAyat') : '',
+    maknaAyatJumlah: document.getElementById('popupEditMaknaAyatJumlah')?.value || '',
     ts: Date.now()
   };
   try { localStorage.setItem(KUNCI_DRAFT_POPUP, JSON.stringify(draft)); } catch (e) {}
@@ -4613,6 +4638,8 @@ function terapkanDraftKePopup(d) {
   if (edT) { edT.innerHTML = tasrifanKeHtml(d.tashrif); rapikanEditorTasrifan(edT); }
   const edM = document.getElementById('popupEditMaknaAyat');
   if (edM) { edM.innerHTML = tasrifanKeHtml(d.maknaAyat); rapikanEditorTasrifan(edM); }
+  const inJumlah = document.getElementById('popupEditMaknaAyatJumlah');
+  if (inJumlah) inJumlah.value = d.maknaAyatJumlah || '';
   if ((d.catatan || '').trim()) {
     const w = document.getElementById('popupCatatanWrap');
     if (w) w.style.display = '';
@@ -4741,6 +4768,7 @@ function bukaEditPegonInline(event, srcId, draft) {
   const inputTashrif = row.querySelector('.tashrif-input');
   const inputKataTashrif = row.querySelector('.kata-tashrif-input');
   const inputMaknaAyat = row.querySelector('.makna-ayat-input');
+  const inputMaknaAyatJumlah = row.querySelector('.makna-ayat-jumlah-input');
   const akhirAyat = !!(row.querySelector('.nom-input')?.value || '').trim();
   if (!inputIndo || !inputJawa) return;
 
@@ -4777,7 +4805,9 @@ function bukaEditPegonInline(event, srcId, draft) {
     </div>
     <div style="font-size:10px;color:#a07840;margin-top:2px;">Untuk kata gandeng (mis. نومكم): sorot sebagian huruf di kotak Teks Arab di atas (mis. hanya نوم), lalu ketuk "dari seleksi".</div>
     ${akhirAyat ? `<label>Makna/Pengertian Ayat (opsional — hanya utk penjelasan yg dalam; tombol "Tafsir" di popup Mode Kajian. Kalau menyambung dari ayat sebelumnya, tulis semua di sini)</label>
-    ${htmlEditorTasrifan('popupEditMaknaAyat', "makna/pengertian ayat ini (kosongkan bila tidak perlu)...", tasrifanKeHtml(inputMaknaAyat?.value))}` : ''}
+    ${htmlEditorTasrifan('popupEditMaknaAyat', "makna/pengertian ayat ini (kosongkan bila tidak perlu)...", tasrifanKeHtml(inputMaknaAyat?.value))}
+    <label>Mencakup berapa ayat (termasuk ayat ini)? (kosongkan/1 = hanya ayat ini; kutipan otomatis jadi rentang, mis. "30-32")</label>
+    <input type="number" min="1" id="popupEditMaknaAyatJumlah" value="${(inputMaknaAyatJumlah?.value||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" placeholder="1" style="width:70px;font-size:14px;" />` : ''}
     <div id="popupCatatanToggleWrap" style="${catatanAda ? 'display:none;' : ''}">
       <a href="javascript:void(0)" id="popupCatatanToggle" style="display:inline-block;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:#c9a84c;margin-top:6px;text-decoration:underline;" onclick="document.getElementById('popupCatatanToggleWrap').style.display='none';document.getElementById('popupCatatanWrap').style.display='block';document.getElementById('popupEditCatatan').focus();">+ Tambah catatan</a>
     </div>
@@ -4852,6 +4882,7 @@ function simpanEditPegonInline(srcId) {
   const inputTashrif = row.querySelector('.tashrif-input');
   const inputKataTashrif = row.querySelector('.kata-tashrif-input');
   const inputMaknaAyat = row.querySelector('.makna-ayat-input');
+  const inputMaknaAyatJumlah = row.querySelector('.makna-ayat-jumlah-input');
   const nilaiArab = document.getElementById('popupEditArab')?.value || '';
   const nilaiIndo = document.getElementById('popupEditIndo')?.value || '';
   const nilaiJawa = document.getElementById('popupEditJawa')?.value || '';
@@ -4860,6 +4891,7 @@ function simpanEditPegonInline(srcId) {
   const nilaiTasrifan = ambilTasrifanDariEditor('popupEditTasrifan');
   const nilaiTashrif = ambilTasrifanDariEditor('popupEditTashrif');
   const nilaiMaknaAyat = document.getElementById('popupEditMaknaAyat') ? ambilTasrifanDariEditor('popupEditMaknaAyat') : (inputMaknaAyat?.value || '');
+  const nilaiMaknaAyatJumlah = (document.getElementById('popupEditMaknaAyatJumlah')?.value || '').trim();
   const nilaiKataTashrif = (document.getElementById('popupEditKataTashrif')?.value || '').trim();
   const nilaiPengaliStr = document.getElementById('popupEditPengali')?.value || '';
   if (inputArab && nilaiArab.trim()) inputArab.value = nilaiArab;
@@ -4870,6 +4902,7 @@ function simpanEditPegonInline(srcId) {
   if (inputTasrifan) inputTasrifan.value = nilaiTasrifan;
   if (inputTashrif) inputTashrif.value = nilaiTashrif;
   if (inputMaknaAyat) inputMaknaAyat.value = nilaiMaknaAyat;
+  if (inputMaknaAyatJumlah) inputMaknaAyatJumlah.value = nilaiMaknaAyatJumlah;
   if (inputKataTashrif) inputKataTashrif.value = nilaiKataTashrif;
 
   const halamanInputEl = row.closest('.halaman-input');
@@ -6752,7 +6785,7 @@ function tambahHalamanDaftarKode(data = {}) {
   <button class="btn-tambah-kata" style="background:#8b6914;" onclick="tambahKataAwal(${id})" title="Sisipkan kata baru di paling atas (mis. untuk Basmalah)">⇧ Sisipkan di Awal</button>
 `;
       container.appendChild(div);
-      if (kataList && kataList.length) kataList.forEach(d => tambahKata(id, d.arab, d.maknaIndo || d.makna || '', d.maknaJawa || '', d.kode || '', d.nomor || '', d.krKanan || false, d.geserPegon || '', d.paksaBaris || false, d.catatan || '', d.tasrifan || '', d.tashrif || '', d.kataTashrif || '', d.maknaAyat || ''));
+      if (kataList && kataList.length) kataList.forEach(d => tambahKata(id, d.arab, d.maknaIndo || d.makna || '', d.maknaJawa || '', d.kode || '', d.nomor || '', d.krKanan || false, d.geserPegon || '', d.paksaBaris || false, d.catatan || '', d.tasrifan || '', d.tashrif || '', d.kataTashrif || '', d.maknaAyat || '', d.maknaAyatJumlah || ''));
       else tambahKata(id);
     }
 
@@ -6761,14 +6794,14 @@ function tambahHalamanDaftarKode(data = {}) {
         document.getElementById(id)?.remove();
     }
 
-    function tambahKata(babId, arab = '', maknaIndo = '', maknaJawa = '', kode = '', nomor = '', krKanan = false, geserPegon = '', paksaBaris = false, catatan = '', tasrifan = '', tashrif = '', kataTashrif = '', maknaAyat = '') {
+    function tambahKata(babId, arab = '', maknaIndo = '', maknaJawa = '', kode = '', nomor = '', krKanan = false, geserPegon = '', paksaBaris = false, catatan = '', tasrifan = '', tashrif = '', kataTashrif = '', maknaAyat = '', maknaAyatJumlah = '') {
       const tbody = document.getElementById('tbody-' + babId);
       if (!tbody) return;
       const id = kataCounter++;
       const tr = document.createElement('tr');
       tr.id = 'kata-' + id;
       tr.innerHTML = `
-      <td class="col-kode"><input class="kode-input" type="text" placeholder="م · ١ · [١]" value="${kode}" /><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="kr-kanan-cb" ${krKanan?'checked':''} style="width:12px;height:12px;"> KR→kanan</label><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="paksa-baris-cb" ${paksaBaris?'checked':''} style="width:12px;height:12px;"> ↵ Baris baru</label><input class="geser-pegon-input" type="number" placeholder="Geser px" value="${geserPegon||''}" title="Geser Pegon (px): positif=kiri, negatif=kanan" style="width:54px;font-size:9px;margin-top:2px;border:1px solid #d4b87a;border-radius:3px;padding:1px 3px;color:#7a5a20;" /><input class="catatan-input" type="hidden" value="${(catatan||'').replace(/"/g,'&quot;')}" /><input class="tasrifan-input" type="hidden" value="${(tasrifan||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" /><input class="tashrif-input" type="hidden" value="${(tashrif||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" /><input class="kata-tashrif-input" type="hidden" value="${(kataTashrif||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" /><input class="makna-ayat-input" type="hidden" value="${(maknaAyat||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" /></td>
+      <td class="col-kode"><input class="kode-input" type="text" placeholder="م · ١ · [١]" value="${kode}" /><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="kr-kanan-cb" ${krKanan?'checked':''} style="width:12px;height:12px;"> KR→kanan</label><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="paksa-baris-cb" ${paksaBaris?'checked':''} style="width:12px;height:12px;"> ↵ Baris baru</label><input class="geser-pegon-input" type="number" placeholder="Geser px" value="${geserPegon||''}" title="Geser Pegon (px): positif=kiri, negatif=kanan" style="width:54px;font-size:9px;margin-top:2px;border:1px solid #d4b87a;border-radius:3px;padding:1px 3px;color:#7a5a20;" /><input class="catatan-input" type="hidden" value="${(catatan||'').replace(/"/g,'&quot;')}" /><input class="tasrifan-input" type="hidden" value="${(tasrifan||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" /><input class="tashrif-input" type="hidden" value="${(tashrif||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" /><input class="kata-tashrif-input" type="hidden" value="${(kataTashrif||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" /><input class="makna-ayat-input" type="hidden" value="${(maknaAyat||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" /><input class="makna-ayat-jumlah-input" type="hidden" value="${(maknaAyatJumlah||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" /></td>
       <td><input class="arab-input" type="text" placeholder="كَلِمَة" value="${arab}" /></td>
       <td class="col-indo td-indo-${babId}"><input class="makna-indo" type="text" placeholder="artinya..." value="${maknaIndo}" /></td>
 <td class="col-jawa td-jawa-${babId}" style="display:none;"><input class="makna-jawa" type="text" placeholder="tegese..." value="${maknaJawa}" /></td>
@@ -6789,7 +6822,7 @@ function tambahHalamanDaftarKode(data = {}) {
       const tr = document.createElement('tr');
       tr.id = 'kata-' + id;
       tr.innerHTML = `
-      <td class="col-kode"><input class="kode-input" type="text" placeholder="م · ١ · [١]" value="" /><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="kr-kanan-cb" style="width:12px;height:12px;"> KR→kanan</label><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="paksa-baris-cb" style="width:12px;height:12px;"> ↵ Baris baru</label><input class="geser-pegon-input" type="number" placeholder="Geser px" value="" title="Geser Pegon (px): positif=kiri, negatif=kanan" style="width:54px;font-size:9px;margin-top:2px;border:1px solid #d4b87a;border-radius:3px;padding:1px 3px;color:#7a5a20;" /><input class="catatan-input" type="hidden" value="" /><input class="tasrifan-input" type="hidden" value="" /><input class="tashrif-input" type="hidden" value="" /><input class="kata-tashrif-input" type="hidden" value="" /><input class="makna-ayat-input" type="hidden" value="" /></td>
+      <td class="col-kode"><input class="kode-input" type="text" placeholder="م · ١ · [١]" value="" /><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="kr-kanan-cb" style="width:12px;height:12px;"> KR→kanan</label><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="paksa-baris-cb" style="width:12px;height:12px;"> ↵ Baris baru</label><input class="geser-pegon-input" type="number" placeholder="Geser px" value="" title="Geser Pegon (px): positif=kiri, negatif=kanan" style="width:54px;font-size:9px;margin-top:2px;border:1px solid #d4b87a;border-radius:3px;padding:1px 3px;color:#7a5a20;" /><input class="catatan-input" type="hidden" value="" /><input class="tasrifan-input" type="hidden" value="" /><input class="tashrif-input" type="hidden" value="" /><input class="kata-tashrif-input" type="hidden" value="" /><input class="makna-ayat-input" type="hidden" value="" /><input class="makna-ayat-jumlah-input" type="hidden" value="" /></td>
       <td><input class="arab-input" type="text" placeholder="كَلِمَة" value="" /></td>
       <td class="col-indo td-indo-${babId}"><input class="makna-indo" type="text" placeholder="artinya..." value="" /></td>
       <td class="col-jawa td-jawa-${babId}" style="display:none;"><input class="makna-jawa" type="text" placeholder="tegese..." value="" /></td>
@@ -6823,7 +6856,7 @@ function tambahHalamanDaftarKode(data = {}) {
       const trBaru = document.createElement('tr');
       trBaru.id = 'kata-' + id;
       trBaru.innerHTML = `
-      <td class="col-kode"><input class="kode-input" type="text" placeholder="م · ١ · [١]" value="" /><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="kr-kanan-cb" style="width:12px;height:12px;"> KR→kanan</label><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="paksa-baris-cb" style="width:12px;height:12px;"> ↵ Baris baru</label><input class="geser-pegon-input" type="number" placeholder="Geser px" value="" title="Geser Pegon (px): positif=kiri, negatif=kanan" style="width:54px;font-size:9px;margin-top:2px;border:1px solid #d4b87a;border-radius:3px;padding:1px 3px;color:#7a5a20;" /><input class="catatan-input" type="hidden" value="" /><input class="tasrifan-input" type="hidden" value="" /><input class="tashrif-input" type="hidden" value="" /><input class="kata-tashrif-input" type="hidden" value="" /><input class="makna-ayat-input" type="hidden" value="" /></td>
+      <td class="col-kode"><input class="kode-input" type="text" placeholder="م · ١ · [١]" value="" /><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="kr-kanan-cb" style="width:12px;height:12px;"> KR→kanan</label><label style="font-size:9px;color:#a07840;display:block;margin-top:2px;white-space:nowrap;"><input type="checkbox" class="paksa-baris-cb" style="width:12px;height:12px;"> ↵ Baris baru</label><input class="geser-pegon-input" type="number" placeholder="Geser px" value="" title="Geser Pegon (px): positif=kiri, negatif=kanan" style="width:54px;font-size:9px;margin-top:2px;border:1px solid #d4b87a;border-radius:3px;padding:1px 3px;color:#7a5a20;" /><input class="catatan-input" type="hidden" value="" /><input class="tasrifan-input" type="hidden" value="" /><input class="tashrif-input" type="hidden" value="" /><input class="kata-tashrif-input" type="hidden" value="" /><input class="makna-ayat-input" type="hidden" value="" /><input class="makna-ayat-jumlah-input" type="hidden" value="" /></td>
       <td><input class="arab-input" type="text" placeholder="كَلِمَة" value="" /></td>
       <td class="col-indo td-indo-${babId}"><input class="makna-indo" type="text" placeholder="artinya..." value="" /></td>
       <td class="col-jawa td-jawa-${babId}" style="display:none;"><input class="makna-jawa" type="text" placeholder="tegese..." value="" /></td>
@@ -7801,7 +7834,7 @@ document.querySelectorAll('.halaman-input').forEach((hal, hIdx) => {
             const nomor=tr.querySelector('.nom-input').value.trim();
             const krKanan=tr.querySelector('.kr-kanan-cb')?.checked||false;
             const paksaBaris=tr.querySelector('.paksa-baris-cb')?.checked||false;
-if(arab)kataList.push({kode,arab,maknaIndo,maknaJawa,nomor,krKanan,paksaBaris,belumAdaArti:!(maknaIndo||maknaJawa),geserPegon:tr.querySelector('.geser-pegon-input')?.value||'',catatan:tr.querySelector('.catatan-input')?.value||'',tasrifan:tr.querySelector('.tasrifan-input')?.value||'',tashrif:tr.querySelector('.tashrif-input')?.value||'',kataTashrif:tr.querySelector('.kata-tashrif-input')?.value||'',maknaAyat:tr.querySelector('.makna-ayat-input')?.value||'',srcId:tr.id});        
+if(arab)kataList.push({kode,arab,maknaIndo,maknaJawa,nomor,krKanan,paksaBaris,belumAdaArti:!(maknaIndo||maknaJawa),geserPegon:tr.querySelector('.geser-pegon-input')?.value||'',catatan:tr.querySelector('.catatan-input')?.value||'',tasrifan:tr.querySelector('.tasrifan-input')?.value||'',tashrif:tr.querySelector('.tashrif-input')?.value||'',kataTashrif:tr.querySelector('.kata-tashrif-input')?.value||'',maknaAyat:tr.querySelector('.makna-ayat-input')?.value||'',maknaAyatJumlah:tr.querySelector('.makna-ayat-jumlah-input')?.value||'',srcId:tr.id});        
          });
           html += `<div class="hasil-bab-section">`;
           const judulIndo = bab.querySelector('.bab-judul-indo')?.value.trim() || '';
@@ -8361,6 +8394,7 @@ html += `</div>`;
               tashrif: tr.querySelector('.tashrif-input')?.value || '',
               kataTashrif: tr.querySelector('.kata-tashrif-input')?.value || '',
               maknaAyat: tr.querySelector('.makna-ayat-input')?.value || '',
+              maknaAyatJumlah: tr.querySelector('.makna-ayat-jumlah-input')?.value || '',
             });
           });
           babList.push({
@@ -8961,7 +8995,7 @@ html += `</div>`;
     // yang ditambah belakangan juga (tanpa perlu ubah tiap fungsi
     // pembuat baris satu-satu).
     document.getElementById('containerHalaman').addEventListener('input', (e) => {
-      if (e.target.matches('.kode-input, .arab-input, .makna-indo, .makna-jawa, .geser-pegon-input, .catatan-input, .tasrifan-input, .tashrif-input, .kata-tashrif-input, .makna-ayat-input')) {
+      if (e.target.matches('.kode-input, .arab-input, .makna-indo, .makna-jawa, .geser-pegon-input, .catatan-input, .tasrifan-input, .tashrif-input, .kata-tashrif-input, .makna-ayat-input, .makna-ayat-jumlah-input')) {
         simpan();
       }
     });
