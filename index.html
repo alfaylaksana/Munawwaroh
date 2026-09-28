@@ -2885,6 +2885,16 @@ body.mode-html-aktif .hasil-kotak {
   padding: 4px 0 0;
 }
 
+.pemisah-ayat-kutipan {
+  display: inline-block;
+  width: 0.5em;
+  height: 0.5em;
+  border: 1.3px solid #c9a84c;
+  border-radius: 50%;
+  margin: 0 0.3em;
+  vertical-align: 0.05em;
+}
+
 .kartu-tafsir-ayat {
   font-family: 'AmiriQuran', 'Scheherazade New', serif;
   font-size: 14px;   /* tafsir (11px) + 3 */
@@ -4354,7 +4364,7 @@ const LABEL_TAMPIL_KAJIAN = { irab: "I'rab", tashrif: 'Tashrif', makna: 'Tafsir'
 const JUDUL_TAFSIR = 'Tafsir Al-Munawwaroh';
 
 // Kutipan ayat yg sedang ditafsiri, format: "<ayat lengkap+harakat> (<nama surat Arab>: <no ayat>)".
-function kutipanAyatTafsir(konteksAyat) {
+function kutipanAyatTafsir(konteksAyat, sebagaiHtml) {
   if (!konteksAyat || !konteksAyat.teksAyatLengkap) return '';
   // Tampil semampunya (nama+nomor surat+nomor ayat) walau ada field yg kosong
   // — supaya sumbernya tetap tertera di layar meski tdk lewat tombol Share
@@ -4366,7 +4376,13 @@ function kutipanAyatTafsir(konteksAyat) {
   const rentangAyat = (noAyatAwal && noAyatAwal !== noAyat) ? (noAyatAwal + '-' + noAyat) : noAyat;
   const namaLengkap = [nama, noSurah].filter(Boolean).join(' ');
   const dalamKurung = [namaLengkap, rentangAyat].filter(Boolean).join(': ');
-  return konteksAyat.teksAyatLengkap + (dalamKurung ? ' (' + dalamKurung + ')' : '');
+  // Antar ayat dlm rentang diberi lingkaran kecil tanpa angka (di layar: cincin
+  // emas kecil spt badge nomor ayat; di teks Share: "○").
+  const esc = (t) => sebagaiHtml ? String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : String(t);
+  const bagian = (konteksAyat.bagianAyat && konteksAyat.bagianAyat.length) ? konteksAyat.bagianAyat : [konteksAyat.teksAyatLengkap];
+  const pemisah = sebagaiHtml ? ' <span class="pemisah-ayat-kutipan"></span> ' : ' ○ ';
+  const isi = bagian.map(esc).join(pemisah);
+  return isi + (dalamKurung ? ' (' + esc(dalamKurung) + ')' : '');
 }
 
 // HTML berformat (dari editor Tasrifan/Tashrifan) -> teks polos apa adanya,
@@ -4447,7 +4463,7 @@ function isiKartuKajian(kartu, tampil) {
   // di tampilan lain tetap frasa lengkap.
   const kt = (d.kataTashrif || '').trim().replace(/&/g, '&amp;').replace(/</g, '&lt;');
   const arabTampil = (tampil === 'tashrif' && kt) ? kt : d.arab;
-  const kutipanAyat = tampil === 'makna' ? kutipanAyatTafsir(d.konteksAyat) : '';
+  const kutipanAyat = tampil === 'makna' ? kutipanAyatTafsir(d.konteksAyat, true) : '';
   const judulHtml = tampil === 'makna'
     ? `<div class="kartu-tafsir-nama">${JUDUL_TAFSIR}</div>${kutipanAyat ? `<div class="kartu-tafsir-ayat">${kutipanAyat}</div>` : ''}`
     : (arabTampil ? `<div class="kartu-baca-arab" style="direction:rtl;">${arabTampil}</div>` : '');
@@ -4517,7 +4533,7 @@ function cariKonteksAyat(row) {
   // Teks ayat lengkap: dari kata setelah akhir ayat SEBELUM rentang, sampai
   // akhir ayat ini. nomorAyatAwal = nomor ayat PERTAMA dlm rentang (utk kutipan
   // "30-32"; sama dgn nomorAyat kalau jumlahAyat=1).
-  let teksAyatLengkap = '', nomorAyatAwal = '';
+  let teksAyatLengkap = '', nomorAyatAwal = '', bagianAyat = [];
   if (idxAkhir >= 0) {
     let idxAwal = 0;
     let sisaLangkah = jumlahAyat - 1;   // brp batas ayat SEBELUMNYA lg yg perlu dilewati
@@ -4529,15 +4545,39 @@ function cariKonteksAyat(row) {
       }
       if (i === 0) idxAwal = 0;   // habis sampai awal bab: cakup dari kata pertama yg ada
     }
-    teksAyatLengkap = semuaBaris.slice(idxAwal, idxAkhir + 1)
-      .map(tr => (tr.querySelector('.arab-input, .s-arab')?.value || '').trim())
-      .filter(Boolean).join(' ');
     for (let i = idxAwal; i <= idxAkhir; i++) {
       const v = (semuaBaris[i]?.querySelector('.nom-input')?.value || '').trim();
       if (v) { nomorAyatAwal = v; break; }
     }
+    // Pecah per ayat (batas = baris yg punya nomor ayat), supaya antar ayat bisa
+    // diberi pemisah di kutipan.
+    const segmen = [[]];
+    for (let i = idxAwal; i <= idxAkhir; i++) {
+      const tr = semuaBaris[i];
+      const kata = (tr.querySelector('.arab-input, .s-arab')?.value || '').trim();
+      if (kata) segmen[segmen.length - 1].push(kata);
+      if ((tr.querySelector('.nom-input')?.value || '').trim() && i < idxAkhir) segmen.push([]);
+    }
+    // Basmalah di awal surat BUKAN bagian ayat 1 (kecuali Al-Fatihah) — dibuang
+    // dari kutipan, dgn cara mengenali yg sama spt Mode Bacaan.
+    if (angkaArabKeLatin(nomorAyatAwal) === '1' && parseInt(nomorSurah, 10) !== 1) {
+      segmen[0] = buangBasmalahAwal(segmen[0]);
+    }
+    bagianAyat = segmen.map(k => k.join(' ')).filter(Boolean);
+    teksAyatLengkap = bagianAyat.join(' ');
   }
-  return { namaSurahArab, namaSurahIndo, nomorSurah, nomorAyat, nomorAyatAwal, teksAyatLengkap };
+  return { namaSurahArab, namaSurahIndo, nomorSurah, nomorAyat, nomorAyatAwal, teksAyatLengkap, bagianAyat };
+}
+
+// Buang Basmalah dari awal daftar frasa (2-4 frasa pertama yg gabungannya sama
+// dgn lafal Basmalah), asal masih ada frasa lain sesudahnya. Sama dgn logika
+// Mode Bacaan, krn jumlah frasa Basmalah bisa 3 atau 4 tergantung cara input.
+function buangBasmalahAwal(kata) {
+  const batas = Math.min(kata.length - 1, 4);
+  for (let n = 2; n <= batas; n++) {
+    if (normalisasiUntukCocokkan(kata.slice(0, n).join(' ')) === BASMALAH_NORMAL) return kata.slice(n);
+  }
+  return kata;
 }
 
 function bukaKartuBaca(event, srcId) {
