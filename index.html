@@ -8187,6 +8187,25 @@ html += `</div>`;
       return JSON.parse(JSON.stringify(obj));
     }
 
+    // ── Simpan inkremental ──────────────────────────────────────────
+    // Menyimpan "sidik jari" isi dokumen yang terakhir diketahui sama
+    // dengan Firestore (diisi saat muat, diperbarui tiap penulisan
+    // berhasil). simpanDB() hanya menulis dokumen yang sidik jarinya
+    // berubah. Kalau catatan kosong/tidak ada → menulis semuanya.
+    let _jejakProfil = null;
+    let _jejakHalaman = {};   // { "0": "<sidik jari>", ... } kunci = ID dokumen
+
+    function _setJejak(profil, dokHalaman) {
+      try {
+        _jejakProfil = kanonik(profil);
+        const baru = {};
+        Object.keys(dokHalaman).forEach(id => { baru[id] = kanonik(dokHalaman[id]); });
+        _jejakHalaman = baru;
+      } catch (e) { _jejakProfil = null; _jejakHalaman = {}; }
+    }
+
+    function _resetJejak() { _jejakProfil = null; _jejakHalaman = {}; }
+
     function simpanDB(data, bersihkanLama = false) {
       if (!REF_PROFIL) return Promise.reject(new Error('Firestore tidak tersedia (gagal dimuat). Cek koneksi internet lalu muat ulang halaman.'));
       const halamanList = data.halamanList || [];
@@ -8194,9 +8213,25 @@ html += `</div>`;
       delete profil.halamanList;
       profil.jumlahHalaman = halamanList.length;
 
-      const tugas = [REF_PROFIL.set(bersihkanUndefined(profil))];
+      // Lupakan catatan untuk nomor halaman di luar daftar sekarang
+      // (dokumennya bisa terhapus dari server; kalau nanti halaman
+      // bertambah lagi, harus ditulis ulang).
+      Object.keys(_jejakHalaman).forEach(id => {
+        if (parseInt(id, 10) >= halamanList.length) delete _jejakHalaman[id];
+      });
+
+      const tugas = [];
+      const profilBersih = bersihkanUndefined(profil);
+      const fpProfil = kanonik(profilBersih);
+      if (fpProfil !== _jejakProfil) {
+        tugas.push(REF_PROFIL.set(profilBersih).then(() => { _jejakProfil = fpProfil; }));
+      }
       halamanList.forEach((hal, i) => {
-        tugas.push(REF_HALAMAN.doc(String(i)).set(bersihkanUndefined(hal)));
+        const id = String(i);
+        const halBersih = bersihkanUndefined(hal);
+        const fp = kanonik(halBersih);
+        if (_jejakHalaman[id] === fp) return;   // tidak berubah → lewati
+        tugas.push(REF_HALAMAN.doc(id).set(halBersih).then(() => { _jejakHalaman[id] = fp; }));
       });
 
       return Promise.all(tugas).then(() => {
@@ -8226,8 +8261,10 @@ html += `</div>`;
         const profil = profilSnap.data();
         return REF_HALAMAN.get().then(snap => {
           const arr = [];
-          snap.forEach(doc => { arr[parseInt(doc.id, 10)] = doc.data(); });
+          const dok = {};
+          snap.forEach(doc => { arr[parseInt(doc.id, 10)] = doc.data(); dok[doc.id] = doc.data(); });
           const halamanList = arr.filter(h => h !== undefined);
+          _setJejak(profil, dok);
           return Object.assign({}, profil, { halamanList });
         });
       });
@@ -8238,7 +8275,7 @@ html += `</div>`;
       return REF_HALAMAN.get().then(snap => {
         const hapus = [];
         snap.forEach(doc => hapus.push(doc.ref.delete()));
-        return Promise.all(hapus).then(() => REF_PROFIL.delete());
+        return Promise.all(hapus).then(() => REF_PROFIL.delete()).then(() => { _resetJejak(); });
       });
     }
     // ─────────────────────────────────────────────────────────────
@@ -8611,10 +8648,12 @@ html += `</div>`;
         const profil = profilSnap.data();
         return REF_HALAMAN.get({ source: 'cache' }).then(snap => {
           const arr = [];
-          snap.forEach(doc => { arr[parseInt(doc.id, 10)] = doc.data(); });
+          const dok = {};
+          snap.forEach(doc => { arr[parseInt(doc.id, 10)] = doc.data(); dok[doc.id] = doc.data(); });
           const halamanList = arr.filter(h => h !== undefined);
           // Salinan dianggap sah hanya kalau LENGKAP (jumlah = jumlahHalaman di profil).
           if (!profil.jumlahHalaman || halamanList.length !== profil.jumlahHalaman || arr.length !== halamanList.length) return null;
+          _setJejak(profil, dok);
           return Object.assign({}, profil, { halamanList });
         });
       }).catch(() => null);
