@@ -1,4 +1,4 @@
-const CACHE_NAME = 'munawwaroh-v3';
+const CACHE_NAME = 'munawwaroh-v4';
 
 const APP_SHELL = [
   './',
@@ -7,6 +7,7 @@ const APP_SHELL = [
   './icon-192.png',
   './icon-512.png',
   './juz30-uthmani.json',
+  './yasin-uthmani.json',
   './libs/html2canvas.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
   'https://www.gstatic.com/firebasejs/11.2.0/firebase-app-compat.js',
