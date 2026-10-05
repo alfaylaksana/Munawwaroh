@@ -7372,7 +7372,7 @@ function terapkanLebarKolom(halEl) {
 
         const idxHarapan = indexKonten - 1;
         if (idxHarapan >= AWAL_HALAMAN_MUSHAF.length) {
-          log.push(`Halaman-app ke-${indexKonten}: ⚠️ sudah melebihi ${AWAL_HALAMAN_MUSHAF.length} halaman mushaf di tabel (Yasin 440-445 + Juz 30 582-604) (mulai Surah ${nomorSurah} ayat ${ayahNum}) — cek apakah ada Halaman-app kosong yang perlu dihapus/gabung, atau memang datanya sudah lebih dari Juz 30.`);
+          log.push(`Halaman-app ke-${indexKonten}: ⚠️ sudah melebihi ${AWAL_HALAMAN_MUSHAF.length} halaman mushaf di tabel (Yasin 440-445 + Ar-Rahman 531-534 + Juz 30 582-604) (mulai Surah ${nomorSurah} ayat ${ayahNum}) — cek apakah ada Halaman-app kosong yang perlu dihapus/gabung, atau memang datanya sudah lebih dari Juz 30.`);
           return;
         }
         const harapan = AWAL_HALAMAN_MUSHAF[idxHarapan];
@@ -7385,7 +7385,7 @@ function terapkanLebarKolom(halEl) {
       });
 
       if (!log.length) { alert('Tidak ada Halaman berisi Bab yang bisa dicek.'); return; }
-      alert('Diagnosa batas Halaman vs Mushaf asli (Yasin hlm 440-445 + Juz 30 hlm 582-604):\n\n' + log.join('\n') + '\n\nCatatan: ini cuma laporan, TIDAK mengubah data apa pun. Kalau ada yang ❌, perlu dirapikan manual (pindah kata antar Bab/Halaman) supaya pas dgn batas halaman mushaf asli.');
+      alert('Diagnosa batas Halaman vs Mushaf asli (Yasin hlm 440-445 + Ar-Rahman hlm 531-534 + Juz 30 hlm 582-604):\n\n' + log.join('\n') + '\n\nCatatan: ini cuma laporan, TIDAK mengubah data apa pun. Kalau ada yang ❌, perlu dirapikan manual (pindah kata antar Bab/Halaman) supaya pas dgn batas halaman mushaf asli.');
     }
 
     function deteksiNomorSurahSemuaBab() {
@@ -9043,6 +9043,13 @@ html += `</div>`;
       { page: 443, surah: 36, ayah: 41 },
       { page: 444, surah: 36, ayah: 55 },
       { page: 445, surah: 36, ayah: 71 },
+      // Surah Ar-Rahman (55), Mushaf Madinah hlm 531-534. Hlm 531 dibuka ujung Surah
+      // Al-Qamar, tapi Ar-Rahman mulai di tengahnya (55:1). Hlm 534 juga memuat awal
+      // Al-Waqi'ah (56:1) — itu ditangani auto-merge tampilan, bukan baris tabel.
+      { page: 531, surah: 55, ayah: 1 },
+      { page: 532, surah: 55, ayah: 17 },
+      { page: 533, surah: 55, ayah: 41 },
+      { page: 534, surah: 55, ayah: 68 },
       { page: 582, surah: 78, ayah: 1 },
       { page: 583, surah: 78, ayah: 31 },
       { page: 584, surah: 79, ayah: 16 },
@@ -9068,15 +9075,16 @@ html += `</div>`;
       { page: 604, surah: 112, ayah: 1 },
     ];
     function muatDataUthmani() {
-      // juz30-uthmani.json = Juz 30; yasin-uthmani.json = tambahan Surah Yasin.
+      // juz30-uthmani.json = Juz 30; yasin-uthmani.json = tambahan Surah Yasin; rahman-uthmani.json = tambahan Surah Ar-Rahman.
       // File Yasin opsional: kalau tidak ada/gagal dimuat, diabaikan (Mode Bacaan
       // Yasin otomatis fallback ke teks input sendiri), Juz 30 tidak terpengaruh.
       const fetchData = Promise.all([
           fetch('./juz30-uthmani.json').then(res => res.json()),
-          fetch('./yasin-uthmani.json').then(res => res.json()).catch(() => [])
+          fetch('./yasin-uthmani.json').then(res => res.json()).catch(() => []),
+          fetch('./rahman-uthmani.json').then(res => res.json()).catch(() => [])
         ])
-        .then(([dataJuz30, dataYasin]) => {
-          const data = dataJuz30.concat(dataYasin);
+        .then(([dataJuz30, dataYasin, dataRahman]) => {
+          const data = dataJuz30.concat(dataYasin, dataRahman);
           const sudahSiapSebelumnya = dataUthmaniSiap;
           data.forEach(a => { petaUthmani[a.surah + ':' + a.ayah] = a.text; });
           dataUthmaniSiap = true;
