@@ -7,6 +7,7 @@ const APP_SHELL = [
   './icon-192.png',
   './icon-512.png',
   './juz30-uthmani.json',
+  './rahman-uthmani.json',
   './yasin-uthmani.json',
   './libs/html2canvas.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
