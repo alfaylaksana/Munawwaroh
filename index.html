@@ -3549,6 +3549,7 @@ body.mode-html-aktif .hasil-kotak {
       <button id="gbBtn-akhir" onclick="pilihPosisiGabung(this)" data-pos="akhir" style="flex:1;padding:7px 4px;border:1.5px solid #c9a84c;border-radius:6px;background:#c9a84c;color:#fff;font-size:11px;font-weight:bold;cursor:pointer;">⬇ Akhir</button>
       <button id="gbBtn-awal" onclick="pilihPosisiGabung(this)" data-pos="awal" style="flex:1;padding:7px 4px;border:1.5px solid #c9a84c;border-radius:6px;background:#fff8ee;color:#7a4f1e;font-size:11px;cursor:pointer;">⬆ Awal</button>
       <button id="gbBtn-nomor" onclick="pilihPosisiGabung(this)" data-pos="nomor" style="flex:1;padding:7px 4px;border:1.5px solid #c9a84c;border-radius:6px;background:#fff8ee;color:#7a4f1e;font-size:11px;cursor:pointer;">🔢 Setelah N</button>
+      <button id="gbBtn-ganti" onclick="pilihPosisiGabung(this)" data-pos="ganti" style="flex:1;padding:7px 4px;border:1.5px solid #c9a84c;border-radius:6px;background:#fff8ee;color:#7a4f1e;font-size:11px;cursor:pointer;">♻ Ganti</button>
     </div>
     <input type="number" id="gbInputNomor" min="1" placeholder="Setelah halaman ke-..." style="display:none;width:100%;padding:7px;border:1.5px solid #c9a84c;border-radius:6px;font-size:12px;margin-bottom:12px;" />
     <div id="gbInfo" style="font-size:11px;color:#7a5c00;background:#fff3cd;border:1px solid #f0c040;border-radius:6px;padding:8px;margin-bottom:12px;display:none;"></div>
@@ -6437,7 +6438,7 @@ function tambahHalamanDaftarKode(data = {}) {
       document.getElementById('gbBtnOk').disabled = true;
       document.getElementById('gbInputNomor').style.display = 'none';
       document.getElementById('gbInputNomor').value = '';
-      ['akhir','awal','nomor'].forEach(p => {
+      ['akhir','awal','nomor','ganti'].forEach(p => {
         const b = document.getElementById('gbBtn-' + p);
         b.style.background = p === 'akhir' ? '#c9a84c' : '#fff8ee';
         b.style.color = p === 'akhir' ? '#fff' : '#7a4f1e';
@@ -6620,7 +6621,7 @@ function tambahHalamanDaftarKode(data = {}) {
 
     function pilihPosisiGabung(btn) {
       _gbPosisi = btn.dataset.pos;
-      ['akhir','awal','nomor'].forEach(p => {
+      ['akhir','awal','nomor','ganti'].forEach(p => {
         const b = document.getElementById('gbBtn-' + p);
         const aktif = p === _gbPosisi;
         b.style.background = aktif ? '#c9a84c' : '#fff8ee';
@@ -6628,6 +6629,7 @@ function tambahHalamanDaftarKode(data = {}) {
         b.style.fontWeight = aktif ? 'bold' : 'normal';
       });
       document.getElementById('gbInputNomor').style.display = _gbPosisi === 'nomor' ? 'block' : 'none';
+      document.getElementById('gbError').style.display = 'none';
       updateGbInfo();
     }
 
@@ -6646,7 +6648,7 @@ function tambahHalamanDaftarKode(data = {}) {
             tampilGbError('Format JSON tidak dikenali.');
             return;
           }
-          document.getElementById('labelGabungFile').childNodes[0].textContent = 'tck ' + file.name;
+          document.getElementById('labelGabungFile').childNodes[0].textContent = '✅ ' + file.name;
           document.getElementById('gbError').style.display = 'none';
           document.getElementById('gbBtnOk').disabled = false;
           updateGbInfo();
@@ -6665,6 +6667,11 @@ function tambahHalamanDaftarKode(data = {}) {
       let teks = '';
       if (_gbPosisi === 'akhir') teks = total + ' hlm + ' + tambah + ' hlm tambahan = ' + (total+tambah) + ' hlm. Disisipkan di akhir.';
       else if (_gbPosisi === 'awal') teks = total + ' hlm + ' + tambah + ' hlm tambahan = ' + (total+tambah) + ' hlm. Disisipkan di awal.';
+      else if (_gbPosisi === 'ganti') {
+        const sr = new Set();
+        _gbData.forEach(h => (h.babList || []).forEach(b => { const n = _nomorSurahNorm(b.nomorSurah); if (n) sr.add(n); }));
+        teks = 'Mode Ganti: halaman surah ' + ([...sr].join(', ') || '?') + ' di data utama diganti dengan ' + tambah + ' hlm dari file ini, di posisi yang sama. Ada konfirmasi dan cadangan otomatis sebelum mengganti.';
+      }
       else {
         const n = document.getElementById('gbInputNomor').value || '?';
         teks = total + ' hlm + ' + tambah + ' hlm tambahan = ' + (total+tambah) + ' hlm. Disisipkan setelah hlm ke-' + n + '.';
@@ -6675,7 +6682,7 @@ function tambahHalamanDaftarKode(data = {}) {
 
     function tampilGbError(pesan) {
       const el = document.getElementById('gbError');
-      el.textContent = 'tprs ' + pesan;
+      el.textContent = '⚠️ ' + pesan;
       el.style.display = 'block';
       resetTombolGabung();
     }
@@ -6690,6 +6697,75 @@ function tambahHalamanDaftarKode(data = {}) {
         kataList: b.kataList || []
       }));
       return JSON.stringify(inti);
+    }
+
+    // ── Mode "Ganti surah" untuk Gabung JSON ───────────────────────
+    // Mengganti halaman-halaman suatu surah di data utama dengan isi file
+    // (surah dicocokkan lewat nomorSurah tiap bab), di posisi yang sama,
+    // supaya surah yang direvisi (mis. setelah tahap i'rab/tashrif) tidak
+    // jadi dobel. Fungsi hitung di bawah murni (tanpa efek samping).
+    function _nomorSurahNorm(v) {
+      return String(v == null ? '' : v).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).trim();
+    }
+
+    function hitungGantiSurah(utama, baru) {
+      const set = new Set();
+      for (let i = 0; i < baru.length; i++) {
+        const babs = baru[i].babList || [];
+        if (!babs.length || babs.some(b => !_nomorSurahNorm(b.nomorSurah))) {
+          return { galat: 'Mode Ganti butuh nomorSurah di setiap bab pada file. Halaman ke-' + (i + 1) + ' di file belum punya.' };
+        }
+        babs.forEach(b => set.add(_nomorSurahNorm(b.nomorSurah)));
+      }
+      const daftar = [...set].join(', ');
+      const idx = [];
+      for (let i = 0; i < utama.length; i++) {
+        const sr = (utama[i].babList || []).map(b => _nomorSurahNorm(b.nomorSurah));
+        if (!sr.some(x => set.has(x))) continue;
+        if (sr.some(x => !set.has(x))) {
+          return { galat: 'Halaman ke-' + (i + 1) + ' di data utama memuat surah ' + daftar + ' bercampur dengan surah/bab lain, jadi tidak bisa diganti dengan aman. Pakai Akhir/Awal/Setelah N, atau pisahkan dulu halamannya.' };
+        }
+        idx.push(i);
+      }
+      if (!idx.length) {
+        return { galat: 'Surah ' + daftar + ' belum ada di data utama, jadi tidak ada yang bisa diganti. Pakai Akhir / Awal / Setelah N.' };
+      }
+      if (idx[idx.length - 1] - idx[0] + 1 !== idx.length) {
+        return { galat: 'Halaman surah ' + daftar + ' di data utama tidak berurutan (ada halaman lain di sela-selanya), jadi tidak bisa diganti dengan aman.' };
+      }
+      const halamanBaru = [...utama.slice(0, idx[0]), ...baru, ...utama.slice(idx[idx.length - 1] + 1)];
+      return { halamanBaru, idx, daftar };
+    }
+
+    function _unduhCadangan(data, namaFile) {
+      try {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = namaFile; a.style.display = 'none';
+        document.body.appendChild(a); a.click();
+        setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+      } catch (e) { console.warn('Cadangan otomatis gagal diunduh', e); }
+    }
+
+    function gantiSurahDiDataUtama(dataUtama) {
+      const utama = dataUtama.halamanList || [];
+      const h = hitungGantiSurah(utama, _gbData);
+      if (h.galat) { tampilGbError(h.galat); return; }
+      const pesan = 'Ganti surah ' + h.daftar + '?\n\n' +
+        'Halaman lama: ' + h.idx.length + ' (hlm ' + (h.idx[0] + 1) + '–' + (h.idx[h.idx.length - 1] + 1) + ')\n' +
+        'Halaman baru: ' + _gbData.length + '\n\n' +
+        'Isi lama surah ini akan DIGANTI dengan isi file. Cadangan seluruh data lama diunduh otomatis dulu.';
+      if (!confirm(pesan)) { resetTombolGabung(); return; }
+      _unduhCadangan(dataUtama, 'cadangan-sebelum-ganti-surah-' + h.daftar.replace(/,\s*/g, '-') + '.json');
+      const dataGabung = { ...dataUtama, halamanList: h.halamanBaru };
+      // bersihkanLama=true: data di sini lengkap (dari server), jadi dokumen sisa
+      // yang nomornya melebihi jumlah halaman baru aman dibuang.
+      simpanDB(dataGabung, true).then(() => {
+        tutupModalGabung();
+        alert('Surah ' + h.daftar + ' diganti: ' + h.idx.length + ' hlm lama → ' + _gbData.length + ' hlm baru.');
+        location.reload();
+      }).catch(() => tampilGbError('Gagal menyimpan!'));
     }
 
     let _gbSedangProses = false;
@@ -6712,6 +6788,7 @@ function tambahHalamanDaftarKode(data = {}) {
       muatDB().then(dataUtama => {
         if (!dataUtama) { tampilGbError('Data utama tidak ditemukan!'); return; }
         const halamanUtama = [...(dataUtama.halamanList || [])];
+        if (_gbPosisi === 'ganti') { gantiSurahDiDataUtama(dataUtama); return; }
 
         // Tolak halaman yg isinya (bab+kataList) sudah persis sama dgn
         // halaman yg sudah ada — mencegah duplikasi (mis. akibat tombol
