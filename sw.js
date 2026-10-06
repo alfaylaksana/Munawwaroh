@@ -1,4 +1,4 @@
-const CACHE_NAME = 'munawwaroh-v4';
+const CACHE_NAME = 'munawwaroh-v5';
 
 const APP_SHELL = [
   './',
@@ -19,8 +19,14 @@ const APP_SHELL = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(APP_SHELL))
-      .catch((err) => console.warn('SW install: sebagian gagal di-cache', err))
+      // Satu per satu: kalau ada file yang belum ada di repo (404), file lain tetap tersimpan.
+      // (cache.addAll bersifat semua-atau-tidak sama sekali.)
+      .then((cache) => Promise.allSettled(APP_SHELL.map((u) => cache.add(u))))
+      .then((hasil) => {
+        const gagal = hasil.filter((h) => h.status === 'rejected').length;
+        if (gagal) console.warn('SW install: ' + gagal + ' file belum bisa di-cache (mungkin belum ada di repo)');
+      })
+      .catch((err) => console.warn('SW install: gagal membuka cache', err))
   );
   self.skipWaiting();
 });
