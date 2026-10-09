@@ -3423,6 +3423,7 @@ body.mode-html-aktif .hasil-kotak {
       <div class="dropdown-menu" id="dropData">
         <button class="drop-item" onclick="simpan();tutupDropdown()">💾 Simpan</button>
         <button class="drop-item" onclick="exportJSON();tutupDropdown()">📤 Export JSON</button>
+        <button class="drop-item" onclick="bukaModalUnduhSurah();tutupDropdown()">📤 Unduh satu surah</button>
         <label class="drop-item" style="cursor:pointer;">📥 Import JSON<input type="file" accept=".json" onchange="importJSON(event)" style="display:none;" /></label>
         <div class="dropdown-divider"></div>
         <button class="drop-item" onclick="bersihkanSemuaPegonJawa();tutupDropdown()">🧹 Bersihkan Semua Pegon Jawa</button>
@@ -3510,6 +3511,7 @@ body.mode-html-aktif .hasil-kotak {
         <div class="float-dropdown-menu" id="menuFloatData">
           <button class="float-drop-item" onclick="simpan();tutupFloatDropdown()">💾 Simpan</button>
           <button class="float-drop-item" onclick="exportJSON();tutupFloatDropdown()">📤 Export JSON</button>
+          <button class="float-drop-item" onclick="bukaModalUnduhSurah();tutupFloatDropdown()">📤 Unduh satu surah</button>
           <label class="float-drop-item" style="cursor:pointer;">📥 Import JSON<input type="file" accept=".json" onchange="importJSON(event)" style="display:none;" /></label>
           <button class="float-drop-item" onclick="bukaModalGabung();tutupFloatDropdown()">🔗 Gabung JSON</button>
           <div class="float-drop-item" style="border-top:1px solid #e8dfc0;padding:2px 0;"></div>
@@ -6766,6 +6768,89 @@ function tambahHalamanDaftarKode(data = {}) {
         alert('Surah ' + h.daftar + ' diganti: ' + h.idx.length + ' hlm lama → ' + _gbData.length + ' hlm baru.');
         location.reload();
       }).catch(() => tampilGbError('Gagal menyimpan!'));
+    }
+
+    // ── Unduh satu surah ────────────────────────────────────────────
+    // Mengunduh halaman-halaman satu surah (sesuai tampilan sekarang, termasuk
+    // koreksi yang baru diketik) sebagai satu file JSON siap dimuat di Editor
+    // Pegon. Surah dikenali lewat nomorSurah tiap bab, sama seperti mode Ganti.
+    function _namaBerkasSurah(judul, no) {
+      const dasar = String(judul || '').replace(/[^\p{L}\p{N}]+/gu, '');
+      return (dasar || ('Surah' + no)) + '-mushaf.json';
+    }
+
+    function daftarSurahDariData(data) {
+      const peta = new Map();
+      (data.halamanList || []).forEach((h, i) => {
+        const babs = h.babList || [];
+        const nomor = [...new Set(babs.map(b => _nomorSurahNorm(b.nomorSurah)).filter(Boolean))];
+        nomor.forEach(n => {
+          if (!peta.has(n)) peta.set(n, { no: n, judul: '', idx: [], campur: 0 });
+          const e = peta.get(n);
+          e.idx.push(i);
+          if (nomor.length > 1) e.campur++;
+          if (!e.judul) {
+            const b = babs.find(x => _nomorSurahNorm(x.nomorSurah) === n && (x.babJudulIndo || x.namaBab));
+            if (b) e.judul = b.babJudulIndo || b.namaBab;
+          }
+        });
+      });
+      return [...peta.values()];
+    }
+
+    function tutupModalUnduhSurah() {
+      const a = document.getElementById('modalUnduhSurah'), b = document.getElementById('modalBoxUnduhSurah');
+      if (a) a.style.display = 'none';
+      if (b) b.style.display = 'none';
+    }
+
+    function bukaModalUnduhSurah() {
+      let ov = document.getElementById('modalUnduhSurah'), bx = document.getElementById('modalBoxUnduhSurah');
+      if (!ov) {
+        ov = document.createElement('div'); ov.className = 'modal-overlay'; ov.id = 'modalUnduhSurah';
+        ov.onclick = tutupModalUnduhSurah; document.body.appendChild(ov);
+        bx = document.createElement('div'); bx.className = 'modal-box'; bx.id = 'modalBoxUnduhSurah';
+        bx.style.cssText = 'max-width:340px;width:92%;'; document.body.appendChild(bx);
+      }
+      const daftar = daftarSurahDariData(ambilSemuaData());
+      bx.textContent = '';
+      const h3 = document.createElement('h3'); h3.textContent = '📤 Unduh satu surah'; bx.appendChild(h3);
+      const p = document.createElement('p');
+      p.style.cssText = 'font-size:11px;color:#a07840;margin-bottom:10px;';
+      p.textContent = 'Mengunduh halaman satu surah (sesuai tampilan sekarang) sebagai file JSON, siap dimuat di Editor Pegon.';
+      bx.appendChild(p);
+      const st = document.createElement('div');
+      st.style.cssText = 'font-size:12px;margin:8px 0;color:#2d6a2d;';
+      if (!daftar.length) {
+        const k = document.createElement('p'); k.style.cssText = 'font-size:12px;color:#a33;';
+        k.textContent = 'Belum ada surah yang bab-nya punya nomorSurah di data ini.'; bx.appendChild(k);
+      }
+      daftar.forEach(e => {
+        const t = document.createElement('button');
+        t.style.cssText = 'display:block;width:100%;text-align:left;padding:9px 10px;margin:6px 0;border:1.5px solid #c9a84c;border-radius:8px;background:#fffdf5;color:#7a4f1e;font-size:13px;cursor:pointer;';
+        t.textContent = (e.judul || ('Surah ' + e.no)) + ' · ' + e.idx.length + ' hlm' + (e.campur ? ' ⚠' : '');
+        t.onclick = () => {
+          const d = ambilSemuaData();
+          const x = daftarSurahDariData(d).find(y => y.no === e.no);
+          if (!x) { st.style.color = '#a33'; st.textContent = 'Surah tidak ditemukan.'; return; }
+          const { halamanList, ...header } = d;
+          const nama = _namaBerkasSurah(x.judul, x.no);
+          _unduhCadangan({ ...header, halamanList: x.idx.map(i => halamanList[i]) }, nama);
+          st.style.color = '#2d6a2d'; st.textContent = '✓ Diunduh: ' + nama + ' (' + x.idx.length + ' halaman)';
+        };
+        bx.appendChild(t);
+      });
+      if (daftar.some(e => e.campur)) {
+        const n = document.createElement('p');
+        n.style.cssText = 'font-size:11px;color:#a07840;margin:6px 0;';
+        n.textContent = '⚠ = ada halaman yang memuat surah lain juga; halaman itu ikut terunduh utuh.';
+        bx.appendChild(n);
+      }
+      bx.appendChild(st);
+      const tt = document.createElement('button');
+      tt.style.cssText = 'margin-top:6px;padding:7px 14px;border:1.5px solid #c9a84c;border-radius:6px;background:#fff8ee;color:#7a4f1e;cursor:pointer;';
+      tt.textContent = 'Tutup'; tt.onclick = tutupModalUnduhSurah; bx.appendChild(tt);
+      ov.style.display = 'block'; bx.style.display = 'block';
     }
 
     let _gbSedangProses = false;
