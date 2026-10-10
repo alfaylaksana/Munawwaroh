@@ -6810,24 +6810,37 @@ function tambahHalamanDaftarKode(data = {}) {
         ov = document.createElement('div'); ov.className = 'modal-overlay'; ov.id = 'modalUnduhSurah';
         ov.onclick = tutupModalUnduhSurah; document.body.appendChild(ov);
         bx = document.createElement('div'); bx.className = 'modal-box'; bx.id = 'modalBoxUnduhSurah';
-        bx.style.cssText = 'max-width:340px;width:92%;'; document.body.appendChild(bx);
+        document.body.appendChild(bx);
       }
+      // Kotak dibatasi 85% tinggi layar; hanya daftar surah yang bergulir,
+      // judul + tombol Tutup di atas dan status di bawah tetap terlihat.
+      bx.style.cssText = 'max-width:340px;width:92%;max-height:85vh;flex-direction:column;';
       const daftar = daftarSurahDariData(ambilSemuaData());
       bx.textContent = '';
-      const h3 = document.createElement('h3'); h3.textContent = '📤 Unduh satu surah'; bx.appendChild(h3);
+      const kepala = document.createElement('div');
+      kepala.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;flex:0 0 auto;';
+      const h3 = document.createElement('h3'); h3.style.margin = '0'; h3.textContent = '📤 Unduh satu surah';
+      const tt = document.createElement('button');
+      tt.style.cssText = 'padding:6px 12px;border:1.5px solid #c9a84c;border-radius:6px;background:#fff8ee;color:#7a4f1e;cursor:pointer;font-size:13px;flex:0 0 auto;';
+      tt.textContent = '✕ Tutup'; tt.onclick = tutupModalUnduhSurah;
+      kepala.appendChild(h3); kepala.appendChild(tt); bx.appendChild(kepala);
       const p = document.createElement('p');
-      p.style.cssText = 'font-size:11px;color:#a07840;margin-bottom:10px;';
+      p.style.cssText = 'font-size:11px;color:#a07840;margin:8px 0;flex:0 0 auto;';
       p.textContent = 'Mengunduh halaman satu surah (sesuai tampilan sekarang) sebagai file JSON, siap dimuat di Editor Pegon.';
       bx.appendChild(p);
+      const lis = document.createElement('div');
+      lis.id = 'daftarUnduhSurah';
+      lis.style.cssText = 'flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-right:2px;';
+      bx.appendChild(lis);
       const st = document.createElement('div');
-      st.style.cssText = 'font-size:12px;margin:8px 0;color:#2d6a2d;';
+      st.style.cssText = 'font-size:12px;margin:8px 0 0;color:#2d6a2d;flex:0 0 auto;';
       if (!daftar.length) {
         const k = document.createElement('p'); k.style.cssText = 'font-size:12px;color:#a33;';
-        k.textContent = 'Belum ada surah yang bab-nya punya nomorSurah di data ini.'; bx.appendChild(k);
+        k.textContent = 'Belum ada surah yang bab-nya punya nomorSurah di data ini.'; lis.appendChild(k);
       }
       daftar.forEach(e => {
         const t = document.createElement('button');
-        t.style.cssText = 'display:block;width:100%;text-align:left;padding:9px 10px;margin:6px 0;border:1.5px solid #c9a84c;border-radius:8px;background:#fffdf5;color:#7a4f1e;font-size:13px;cursor:pointer;';
+        t.style.cssText = 'display:block;width:100%;text-align:left;padding:9px 10px;margin:0 0 6px;border:1.5px solid #c9a84c;border-radius:8px;background:#fffdf5;color:#7a4f1e;font-size:13px;cursor:pointer;';
         t.textContent = (e.judul || ('Surah ' + e.no)) + ' · ' + e.idx.length + ' hlm' + (e.campur ? ' ⚠' : '');
         t.onclick = () => {
           const d = ambilSemuaData();
@@ -6838,19 +6851,16 @@ function tambahHalamanDaftarKode(data = {}) {
           _unduhCadangan({ ...header, halamanList: x.idx.map(i => halamanList[i]) }, nama);
           st.style.color = '#2d6a2d'; st.textContent = '✓ Diunduh: ' + nama + ' (' + x.idx.length + ' halaman)';
         };
-        bx.appendChild(t);
+        lis.appendChild(t);
       });
       if (daftar.some(e => e.campur)) {
         const n = document.createElement('p');
-        n.style.cssText = 'font-size:11px;color:#a07840;margin:6px 0;';
+        n.style.cssText = 'font-size:11px;color:#a07840;margin:6px 0 0;flex:0 0 auto;';
         n.textContent = '⚠ = ada halaman yang memuat surah lain juga; halaman itu ikut terunduh utuh.';
         bx.appendChild(n);
       }
       bx.appendChild(st);
-      const tt = document.createElement('button');
-      tt.style.cssText = 'margin-top:6px;padding:7px 14px;border:1.5px solid #c9a84c;border-radius:6px;background:#fff8ee;color:#7a4f1e;cursor:pointer;';
-      tt.textContent = 'Tutup'; tt.onclick = tutupModalUnduhSurah; bx.appendChild(tt);
-      ov.style.display = 'block'; bx.style.display = 'block';
+      ov.style.display = 'block'; bx.style.display = 'flex';
     }
 
     let _gbSedangProses = false;
