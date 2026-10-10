@@ -3550,10 +3550,10 @@ body.mode-html-aktif .hasil-kotak {
     <div style="display:flex;gap:6px;margin-bottom:12px;">
       <button id="gbBtn-akhir" onclick="pilihPosisiGabung(this)" data-pos="akhir" style="flex:1;padding:7px 4px;border:1.5px solid #c9a84c;border-radius:6px;background:#c9a84c;color:#fff;font-size:11px;font-weight:bold;cursor:pointer;">⬇ Akhir</button>
       <button id="gbBtn-awal" onclick="pilihPosisiGabung(this)" data-pos="awal" style="flex:1;padding:7px 4px;border:1.5px solid #c9a84c;border-radius:6px;background:#fff8ee;color:#7a4f1e;font-size:11px;cursor:pointer;">⬆ Awal</button>
-      <button id="gbBtn-nomor" onclick="pilihPosisiGabung(this)" data-pos="nomor" style="flex:1;padding:7px 4px;border:1.5px solid #c9a84c;border-radius:6px;background:#fff8ee;color:#7a4f1e;font-size:11px;cursor:pointer;">🔢 Setelah N</button>
+      <button id="gbBtn-nomor" onclick="pilihPosisiGabung(this)" data-pos="nomor" style="flex:1;padding:7px 4px;border:1.5px solid #c9a84c;border-radius:6px;background:#fff8ee;color:#7a4f1e;font-size:11px;cursor:pointer;">📚 Setelah surat</button>
       <button id="gbBtn-ganti" onclick="pilihPosisiGabung(this)" data-pos="ganti" style="flex:1;padding:7px 4px;border:1.5px solid #c9a84c;border-radius:6px;background:#fff8ee;color:#7a4f1e;font-size:11px;cursor:pointer;">♻ Ganti</button>
     </div>
-    <input type="number" id="gbInputNomor" min="1" placeholder="Setelah halaman ke-..." style="display:none;width:100%;padding:7px;border:1.5px solid #c9a84c;border-radius:6px;font-size:12px;margin-bottom:12px;" />
+    <select id="gbPilihSurah" onchange="document.getElementById('gbError').style.display='none';updateGbInfo()" style="display:none;width:100%;padding:7px;border:1.5px solid #c9a84c;border-radius:6px;font-size:12px;margin-bottom:12px;background:#fffdf5;color:#7a4f1e;"></select>
     <div id="gbInfo" style="font-size:11px;color:#7a5c00;background:#fff3cd;border:1px solid #f0c040;border-radius:6px;padding:8px;margin-bottom:12px;display:none;"></div>
     <div id="gbError" style="font-size:11px;color:#c62828;background:#fdecea;border:1px solid #e53935;border-radius:6px;padding:8px;margin-bottom:12px;display:none;"></div>
     <div class="modal-aksi">
@@ -6438,8 +6438,8 @@ function tambahHalamanDaftarKode(data = {}) {
       document.getElementById('gbInfo').style.display = 'none';
       document.getElementById('gbError').style.display = 'none';
       document.getElementById('gbBtnOk').disabled = true;
-      document.getElementById('gbInputNomor').style.display = 'none';
-      document.getElementById('gbInputNomor').value = '';
+      document.getElementById('gbPilihSurah').style.display = 'none';
+      document.getElementById('gbPilihSurah').textContent = '';
       ['akhir','awal','nomor','ganti'].forEach(p => {
         const b = document.getElementById('gbBtn-' + p);
         b.style.background = p === 'akhir' ? '#c9a84c' : '#fff8ee';
@@ -6621,6 +6621,24 @@ function tambahHalamanDaftarKode(data = {}) {
     }
     // ─────────────────────────────────────────────────────────────
 
+    // Mode "Setelah surat": daftar surah dari data yang sedang tampil (nama + rentang hlm).
+    // Nilai pilihan = nomorSurah; titik sisip dihitung ulang dari data server saat Gabungkan.
+    function isiPilihanSurahGabung() {
+      const sel = document.getElementById('gbPilihSurah');
+      const lama = sel.value;
+      sel.textContent = '';
+      const ph = document.createElement('option');
+      ph.value = ''; ph.textContent = '— pilih surah patokan —'; sel.appendChild(ph);
+      daftarSurahDariData(ambilSemuaData()).forEach(e => {
+        const o = document.createElement('option');
+        const nama = e.judul || ('Surah ' + e.no);
+        o.value = e.no; o.dataset.judul = nama;
+        o.textContent = nama + ' (hlm ' + (e.idx[0] + 1) + '–' + (e.idx[e.idx.length - 1] + 1) + ')' + (e.campur ? ' ⚠' : '');
+        sel.appendChild(o);
+      });
+      if (lama) sel.value = lama;
+    }
+
     function pilihPosisiGabung(btn) {
       _gbPosisi = btn.dataset.pos;
       ['akhir','awal','nomor','ganti'].forEach(p => {
@@ -6630,7 +6648,8 @@ function tambahHalamanDaftarKode(data = {}) {
         b.style.color = aktif ? '#fff' : '#7a4f1e';
         b.style.fontWeight = aktif ? 'bold' : 'normal';
       });
-      document.getElementById('gbInputNomor').style.display = _gbPosisi === 'nomor' ? 'block' : 'none';
+      if (_gbPosisi === 'nomor') isiPilihanSurahGabung();
+      document.getElementById('gbPilihSurah').style.display = _gbPosisi === 'nomor' ? 'block' : 'none';
       document.getElementById('gbError').style.display = 'none';
       updateGbInfo();
     }
@@ -6675,8 +6694,13 @@ function tambahHalamanDaftarKode(data = {}) {
         teks = 'Mode Ganti: halaman surah ' + ([...sr].join(', ') || '?') + ' di data utama diganti dengan ' + tambah + ' hlm dari file ini, di posisi yang sama. Ada konfirmasi dan cadangan otomatis sebelum mengganti.';
       }
       else {
-        const n = document.getElementById('gbInputNomor').value || '?';
-        teks = total + ' hlm + ' + tambah + ' hlm tambahan = ' + (total+tambah) + ' hlm. Disisipkan setelah hlm ke-' + n + '.';
+        const sel = document.getElementById('gbPilihSurah');
+        if (!sel.value) teks = 'Pilih surah patokan di atas: file disisipkan tepat setelah halaman terakhir surah itu.';
+        else {
+          const h = hitungSetelahSurah(ambilSemuaData().halamanList || [], sel.value);
+          const nama = sel.options[sel.selectedIndex].dataset.judul || sel.value;
+          teks = h.galat ? '⚠️ ' + h.galat : total + ' hlm + ' + tambah + ' hlm tambahan = ' + (total+tambah) + ' hlm. Disisipkan setelah hlm ke-' + (h.akhir + 1) + ' (akhir ' + nama + ').';
+        }
       }
       infoEl.textContent = teks;
       infoEl.style.display = 'block';
@@ -6725,18 +6749,40 @@ function tambahHalamanDaftarKode(data = {}) {
         const sr = (utama[i].babList || []).map(b => _nomorSurahNorm(b.nomorSurah));
         if (!sr.some(x => set.has(x))) continue;
         if (sr.some(x => !set.has(x))) {
-          return { galat: 'Halaman ke-' + (i + 1) + ' di data utama memuat surah ' + daftar + ' bercampur dengan surah/bab lain, jadi tidak bisa diganti dengan aman. Pakai Akhir/Awal/Setelah N, atau pisahkan dulu halamannya.' };
+          return { galat: 'Halaman ke-' + (i + 1) + ' di data utama memuat surah ' + daftar + ' bercampur dengan surah/bab lain, jadi tidak bisa diganti dengan aman. Pakai Akhir/Awal/Setelah surat, atau pisahkan dulu halamannya.' };
         }
         idx.push(i);
       }
       if (!idx.length) {
-        return { galat: 'Surah ' + daftar + ' belum ada di data utama, jadi tidak ada yang bisa diganti. Pakai Akhir / Awal / Setelah N.' };
+        return { galat: 'Surah ' + daftar + ' belum ada di data utama, jadi tidak ada yang bisa diganti. Pakai Akhir / Awal / Setelah surat.' };
       }
       if (idx[idx.length - 1] - idx[0] + 1 !== idx.length) {
         return { galat: 'Halaman surah ' + daftar + ' di data utama tidak berurutan (ada halaman lain di sela-selanya), jadi tidak bisa diganti dengan aman.' };
       }
       const halamanBaru = [...utama.slice(0, idx[0]), ...baru, ...utama.slice(idx[idx.length - 1] + 1)];
       return { halamanBaru, idx, daftar };
+    }
+
+    // Titik sisip untuk mode "Setelah surat": tepat setelah halaman TERAKHIR surah
+    // patokan (dicocokkan lewat nomorSurah). Murni, tanpa efek samping.
+    function hitungSetelahSurah(utama, nomor) {
+      const no = _nomorSurahNorm(nomor);
+      if (!no) return { galat: 'Pilih dulu surah patokannya.' };
+      const idx = [];
+      for (let i = 0; i < utama.length; i++) {
+        const sr = (utama[i].babList || []).map(b => _nomorSurahNorm(b.nomorSurah));
+        if (sr.includes(no)) idx.push(i);
+      }
+      if (!idx.length) return { galat: 'Surah ' + no + ' tidak ditemukan di data utama.' };
+      const akhir = idx[idx.length - 1];
+      if (akhir - idx[0] + 1 !== idx.length) {
+        return { galat: 'Halaman surah ' + no + ' di data utama tidak berurutan (ada halaman lain di sela-selanya), jadi titik sisipnya tidak pasti.' };
+      }
+      const srAkhir = (utama[akhir].babList || []).map(b => _nomorSurahNorm(b.nomorSurah));
+      if (srAkhir.some(x => x !== no)) {
+        return { galat: 'Halaman terakhir surah ' + no + ' (hlm ' + (akhir + 1) + ') juga memuat surah/bab lain, jadi titik sisipnya tidak jelas. Pakai Akhir/Awal, atau pisahkan dulu halamannya.' };
+      }
+      return { sisip: akhir + 1, akhir, idx };
     }
 
     function _unduhCadangan(data, namaFile) {
@@ -6912,11 +6958,9 @@ function tambahHalamanDaftarKode(data = {}) {
         } else if (_gbPosisi === 'awal') {
           halamanBaru = [...dataBaruUnik, ...halamanUtama];
         } else {
-          const n = parseInt(document.getElementById('gbInputNomor').value);
-          if (!n || n < 1 || n > halamanUtama.length) {
-            tampilGbError('Nomor halaman tidak valid!'); return;
-          }
-          halamanBaru = [...halamanUtama.slice(0, n), ...dataBaruUnik, ...halamanUtama.slice(n)];
+          const h = hitungSetelahSurah(halamanUtama, document.getElementById('gbPilihSurah').value);
+          if (h.galat) { tampilGbError(h.galat); return; }
+          halamanBaru = [...halamanUtama.slice(0, h.sisip), ...dataBaruUnik, ...halamanUtama.slice(h.sisip)];
         }
         const dataGabung = { ...dataUtama, halamanList: halamanBaru };
         simpanDB(dataGabung).then(() => {
