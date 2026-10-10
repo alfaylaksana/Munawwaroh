@@ -3421,7 +3421,7 @@ body.mode-html-aktif .hasil-kotak {
     <div class="dropdown">
       <button class="btn-tool" onclick="toggleDropdown('dropData')">💾 Data ▾</button>
       <div class="dropdown-menu" id="dropData">
-        <button class="drop-item" onclick="simpan();tutupDropdown()">💾 Simpan</button>
+        <button class="drop-item" onclick="simpan(false,true);tutupDropdown()">💾 Simpan</button>
         <button class="drop-item" onclick="exportJSON();tutupDropdown()">📤 Export JSON</button>
         <button class="drop-item" onclick="bukaModalUnduhSurah();tutupDropdown()">📤 Unduh satu surah</button>
         <label class="drop-item" style="cursor:pointer;">📥 Import JSON<input type="file" accept=".json" onchange="importJSON(event)" style="display:none;" /></label>
@@ -3509,7 +3509,7 @@ body.mode-html-aktif .hasil-kotak {
       <div class="float-dropdown maintenance-only">
         <button class="btn-float bulat" onclick="toggleFloatDropdown('menuFloatData')" title="Data">💾</button>
         <div class="float-dropdown-menu" id="menuFloatData">
-          <button class="float-drop-item" onclick="simpan();tutupFloatDropdown()">💾 Simpan</button>
+          <button class="float-drop-item" onclick="simpan(false,true);tutupFloatDropdown()">💾 Simpan</button>
           <button class="float-drop-item" onclick="exportJSON();tutupFloatDropdown()">📤 Export JSON</button>
           <button class="float-drop-item" onclick="bukaModalUnduhSurah();tutupFloatDropdown()">📤 Unduh satu surah</button>
           <label class="float-drop-item" style="cursor:pointer;">📥 Import JSON<input type="file" accept=".json" onchange="importJSON(event)" style="display:none;" /></label>
@@ -8521,10 +8521,16 @@ html += `</div>`;
       alert(`${terisi.length} field Pegon Jawa sudah dikosongkan.`);
     }
 
-    function simpan(bersihkanLama = false) {
+    // langsung=true (tombol 💾 Simpan): jalan sekarang tanpa debounce 1,5 detik.
+    // Simpan otomatis (langsung=false) tetap memakai debounce seperti biasa.
+    function simpan(bersihkanLama = false, langsung = false) {
       clearTimeout(_simpanTimer);
       _simpanTimer = setTimeout(() => {
-        if (_simpanDitahan) { _simpanMenunggu = true; return; }   // menunggu cek server (cache-first)
+        if (_simpanDitahan) {   // menunggu cek server (cache-first) / bentrok belum diputuskan
+          _simpanMenunggu = true;
+          if (langsung) tampilkanNotifSimpan('⏳ Menunggu cek server dulu — akan tersimpan otomatis', true);
+          return;
+        }
         const data = ambilSemuaData();
         simpanDB(data, bersihkanLama).then(() => {
           tampilkanNotifSimpan('tersimpan', false);
@@ -8540,7 +8546,7 @@ html += `</div>`;
             tampilkanNotifSimpan('❌ GAGAL tersimpan!', true);
           }
         });
-      }, 1500);
+      }, langsung ? 0 : 1500);
     }
 
     function tampilkanNotifSimpan(teks, peringatan) {
