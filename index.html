@@ -4967,7 +4967,7 @@ function simpanEditPegonInline(srcId) {
 
   tutupPopupEditPegon();
   const posisiScroll = window.scrollY;
-  simpan();
+  simpan(false, true);   // tombol ✓ Simpan modal: kirim ke server sekarang, tanpa debounce 1,5 detik
   tampilkan();
   requestAnimationFrame(() => window.scrollTo({ top: posisiScroll }));
 }
