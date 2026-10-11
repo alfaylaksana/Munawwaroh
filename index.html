@@ -1114,6 +1114,21 @@ body.mode-html-aktif .hasil-kotak {
   justify-content: space-between;
   row-gap: calc(10px * var(--fs));
 }
+/* Baris TERAKHIR tiap alur (tiap surah) yang tidak penuh: jangan ikut direnggangkan
+   kiri-kanan (space-between), tapi merapat ke kanan (awal baris RTL). Elemen kosong
+   ::after menyerap sisa ruang HANYA di baris terakhir; margin -6px membatalkan column-gap
+   supaya ia tidak pernah memaksa baris baru. Baris penuh/baris tengah tidak berubah. */
+.hasil-kotak.mode-html .hasil-aliran:not(.aliran-basmalah)::after {
+  content: '';
+  flex: 1000 1 0;
+  min-width: 0;
+  margin-inline-start: -6px;
+}
+/* Basmalah (alur tersendiri di awal surah) tampil di tengah. */
+.hasil-aliran.aliran-basmalah,
+.hasil-kotak.mode-html .hasil-aliran.aliran-basmalah {
+  justify-content: center;
+}
 .hasil-kotak.mode-html .kata-blok {
   padding-right: 1px;
   padding-left: 0px;
@@ -8149,7 +8164,7 @@ if(arab)kataList.push({kode,arab,maknaIndo,maknaJawa,nomor,krKanan,paksaBaris,be
             while (i >= 0 && !kataList[i].nomor) { hitungNoNomor++; i--; }
             if (hitungNoNomor > 0 && i >= 0) gPenutupStart = kataList.length - hitungNoNomor;
           }
-          html += `<div class="hasil-aliran">`;
+          html += `<div class="hasil-aliran${gBasmalahEnd > 0 ? ' aliran-basmalah' : ''}">`;
           kataList.forEach((item, index) => {
             if (gBasmalahEnd > 0 && index === gBasmalahEnd) {
               html += `</div><div class="hasil-aliran">`;
