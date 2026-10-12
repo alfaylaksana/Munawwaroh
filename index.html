@@ -4982,9 +4982,12 @@ function simpanEditPegonInline(srcId) {
 
   tutupPopupEditPegon();
   const posisiScroll = window.scrollY;
+  const jangkar = ambilJangkarScroll();   // blok yang sedang di layar + jaraknya dari atas
   simpan(false, true);   // tombol ✓ Simpan modal: kirim ke server sekarang, tanpa debounce 1,5 detik
   tampilkan();
-  requestAnimationFrame(() => window.scrollTo({ top: posisiScroll }));
+  // Kembali ke blok yang sama (dikoreksi ulang sampai layout settle); piksel hanya cadangan.
+  if (jangkar) pulihkanJangkar(jangkar);
+  else requestAnimationFrame(() => window.scrollTo({ top: posisiScroll }));
 }
 
 function togglePopupTerjemahan(el, nomorAyat) {
@@ -9247,11 +9250,17 @@ html += `</div>`;
         // di sini SEKALI saja setelah render pertama selesai & layout
         // sudah settle (2 rAF supaya height final sudah kehitung).
         try {
-          const posisiTersimpan = localStorage.getItem('posisiScrollTerakhir');
-          if (posisiTersimpan !== null) {
-            requestAnimationFrame(() => requestAnimationFrame(() => {
-              window.scrollTo({ top: parseInt(posisiTersimpan, 10) || 0 });
-            }));
+          // Utamakan JANGKAR (halaman + blok + jarak); piksel mentah hanya cadangan.
+          const jangkarTersimpan = JSON.parse(localStorage.getItem('jangkarScrollTerakhir') || 'null');
+          if (jangkarTersimpan) {
+            pulihkanJangkar(jangkarTersimpan);
+          } else {
+            const posisiTersimpan = localStorage.getItem('posisiScrollTerakhir');
+            if (posisiTersimpan !== null) {
+              requestAnimationFrame(() => requestAnimationFrame(() => {
+                window.scrollTo({ top: parseInt(posisiTersimpan, 10) || 0 });
+              }));
+            }
           }
         } catch (e) {}
 
@@ -9363,6 +9372,89 @@ html += `</div>`;
       }
     });
 
+    // ── Jangkar posisi scroll ────────────────────────────────────────
+    // Posisi dulu disimpan sebagai angka piksel (scrollY). Saat halaman dimuat
+    // ulang / dirender ulang, tinggi halaman belum final (font, penyesuaian baris,
+    // lazy render), jadi piksel yang sama jatuh di surah lain (mis. Al-Kautsar
+    // meloncat ke Az-Zalzalah). Sekarang yang disimpan JANGKAR: halaman ke-berapa
+    // + kata/blok ke-berapa di halaman itu + jarak blok dari atas layar. Saat
+    // dipulihkan, blok yang sama dibawa ke jarak yang sama, dan dikoreksi ulang
+    // beberapa kali sampai layout settle (berhenti kalau Ustaz mulai menggeser).
+    let _jangkarKunci = false;
+    let _jangkarTimer = null;
+    function ambilJangkarScroll() {
+      try {
+        const hs = Array.from(document.querySelectorAll('.hasil-halaman')).filter(e => e.offsetHeight > 0);
+        if (!hs.length) return null;
+        const probe = 4;
+        let idx = -1;
+        for (let i = 0; i < hs.length; i++) {
+          if (hs[i].getBoundingClientRect().top <= probe) idx = i; else break;
+        }
+        if (idx < 0) return null;
+        const el = hs[idx];
+        const r = el.getBoundingClientRect();
+        const a = { h: idx, id: el.id, off: Math.round(probe - r.top), y: Math.round(window.scrollY), n: hs.length };
+        const bloks = el.querySelectorAll('.kata-blok');
+        for (let i = 0; i < bloks.length; i++) {
+          const br = bloks[i].getBoundingClientRect();
+          if (br.bottom > probe) { a.b = i; a.bo = Math.round(br.top); break; }
+        }
+        return a;
+      } catch (e) { return null; }
+    }
+    function terapkanJangkar(a) {
+      try {
+        if (!a) return false;
+        const hs = Array.from(document.querySelectorAll('.hasil-halaman')).filter(e => e.offsetHeight > 0);
+        if (!hs.length) return false;
+        let el = hs[a.h];
+        if (!el || (a.id && el.id !== a.id)) {
+          el = (a.id && document.getElementById(a.id)) || hs[Math.min(a.h, hs.length - 1)];
+        }
+        if (!el) return false;
+        const bloks = el.querySelectorAll('.kata-blok');
+        let target;
+        if (a.b != null && bloks[a.b]) target = bloks[a.b].getBoundingClientRect().top + window.scrollY - a.bo;
+        else target = el.getBoundingClientRect().top + window.scrollY + (a.off || 0) - 4;
+        const html = document.documentElement; const lama = html.style.scrollBehavior;
+        html.style.scrollBehavior = 'auto';
+        window.scrollTo(0, Math.max(0, Math.round(target)));
+        html.style.scrollBehavior = lama;
+        return true;
+      } catch (e) { return false; }
+    }
+    function pulihkanJangkar(a) {
+      if (!a) return;
+      _jangkarKunci = true;
+      let batal = false;
+      const stop = () => { batal = true; };
+      const evs = ['touchstart', 'wheel', 'mousedown', 'keydown'];
+      evs.forEach(ev => window.addEventListener(ev, stop, { passive: true }));
+      const jalan = () => { if (!batal) terapkanJangkar(a); };
+      requestAnimationFrame(() => requestAnimationFrame(jalan));
+      [250, 700, 1300, 2200].forEach(ms => setTimeout(jalan, ms));
+      setTimeout(() => {
+        evs.forEach(ev => window.removeEventListener(ev, stop));
+        _jangkarKunci = false;
+        simpanJangkarScroll();
+      }, 2600);
+    }
+    function simpanJangkarScroll() {
+      if (_jangkarKunci) return;
+      const a = ambilJangkarScroll();
+      if (!a) return;
+      try {
+        localStorage.setItem('jangkarScrollTerakhir', JSON.stringify(a));
+        localStorage.setItem('posisiScrollTerakhir', String(window.scrollY));
+      } catch (e) {}
+    }
+    window.addEventListener('scroll', () => {
+      if (_jangkarKunci) return;
+      clearTimeout(_jangkarTimer);
+      _jangkarTimer = setTimeout(simpanJangkarScroll, 400);
+    }, { passive: true });
+
     // ── Simpan instan saat pindah app / tab disembunyikan ───────────
     // simpan() normal nunggu 1.5 detik (debounce) — kalau pindah app
     // persis di jendela waktu itu, data belum sempat ke-save dan bisa
@@ -9375,6 +9467,7 @@ html += `</div>`;
         if (!_konflikServer) simpanDB(ambilSemuaData()).catch(() => {
           try { localStorage.setItem('gandul_data', JSON.stringify(ambilSemuaData())); } catch(e) {}
         });
+        simpanJangkarScroll();
         try { localStorage.setItem('posisiScrollTerakhir', String(window.scrollY)); } catch (e) {}
       }
     });
