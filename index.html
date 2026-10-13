@@ -8268,6 +8268,20 @@ html += `</div>`;
         if (badge && hal.firstChild !== badge) hal.insertBefore(badge, hal.firstChild);
       });
 
+      // Nomor halaman hanya di AWAL halaman fisik mushaf. Satu Halaman-app = satu
+      // surah, jadi surah yang mulai di tengah halaman membawa badge dengan nomor
+      // yang sama dengan badge sebelumnya (mis. hlm 602: Al-Quraisy, Al-Ma'un,
+      // Al-Kautsar). Badge yang nomornya sama dengan badge sebelumnya dibuang;
+      // surah yang mulai tepat di awal halaman punya nomor baru, jadi badge-nya tetap.
+      let nomorBadgeSebelumnya = null;
+      hasilEl.querySelectorAll('.hasil-halaman').forEach(hal => {
+        const badge = hal.querySelector('.nomor-halaman-hasil');
+        if (!badge) return;
+        const teks = (badge.textContent || '').trim();
+        if (teks && teks === nomorBadgeSebelumnya) badge.remove();
+        else nomorBadgeSebelumnya = teks;
+      });
+
       // Basmalah artistik: pas-kan otomatis ke lebar layar (glyph ligature-nya
       // punya lebar tidak proporsional dgn font-size, jadi clamp() CSS saja
       // kadang belum cukup) — kecilkan font-size sedikit demi sedikit sampai
