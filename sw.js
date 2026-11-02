@@ -1,4 +1,7 @@
-const CACHE_NAME = 'munawwaroh-v5';
+// Awalan 'munawwaroh-' dipakai supaya pembersihan cache lama HANYA menyentuh cache milik app ini
+// (cache browser dibagi untuk seluruh alfaylaksana.github.io — Maktabah, Flashayat, dll. ikut tinggal di sini).
+const CACHE_PREFIX = 'munawwaroh-';
+const CACHE_NAME = CACHE_PREFIX + 'v6';
 
 const APP_SHELL = [
   './',
@@ -13,6 +16,7 @@ const APP_SHELL = [
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
   'https://www.gstatic.com/firebasejs/11.2.0/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore-compat.js',
+  'https://www.gstatic.com/firebasejs/11.2.0/firebase-auth-compat.js',
 ];
 
 // Saat install: simpan semua file inti ke cache supaya app bisa dibuka offline
@@ -31,11 +35,11 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Saat aktif: buang cache versi lama
+// Saat aktif: buang cache versi lama MILIK APP INI saja (jangan hapus cache app lain)
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+      Promise.all(keys.filter((k) => k.startsWith(CACHE_PREFIX) && k !== CACHE_NAME).map((k) => caches.delete(k)))
     )
   );
   self.clients.claim();

@@ -2457,6 +2457,8 @@ body.mode-html-aktif .hasil-kotak {
       transition: opacity 0.3s;
       pointer-events: none;
       z-index: 999;
+      max-width: calc(100vw - 40px);
+      line-height: 1.5;
     }
 
     .notif.tampil {
@@ -8403,6 +8405,8 @@ html += `</div>`;
       appId: "1:666248558558:web:d55a1a4583faf26c190f4f"
     };
     let dbFirestore = null, REF_PROFIL = null, REF_HALAMAN = null, authFirebase = null;
+    let _persistenceAktif = null;   // null = belum diketahui, true = simpan-lokal Firestore aktif, false = tidak aktif
+    let _antreanOffline = 0;        // jumlah simpan() yg dilakukan saat offline & belum dikonfirmasi server
     try {
       firebase.initializeApp(firebaseConfig);
       dbFirestore = firebase.firestore();
@@ -8410,7 +8414,10 @@ html += `</div>`;
       // Offline persistence: data dibaca/ditulis tetap jalan tanpa internet
       // (disimpan lokal via IndexedDB oleh Firestore sendiri), lalu otomatis
       // disinkronkan ke server begitu koneksi kembali ada.
-      dbFirestore.enablePersistence({ synchronizeTabs: true }).catch((err) => {
+      dbFirestore.enablePersistence({ synchronizeTabs: true }).then(() => {
+        _persistenceAktif = true;
+      }).catch((err) => {
+        _persistenceAktif = false;
         if (err.code === 'failed-precondition') {
           console.warn('Offline persistence: hanya bisa aktif di satu tab pada satu waktu.');
         } else if (err.code === 'unimplemented') {
@@ -8608,9 +8615,24 @@ html += `</div>`;
           return;
         }
         const data = ambilSemuaData();
+        const offlineSaatSimpan = !navigator.onLine;
+        if (offlineSaatSimpan) {
+          _antreanOffline++;
+          if (_persistenceAktif === false) {
+            tampilkanNotifSimpan('📴 Offline & penyimpanan lokal tidak aktif — perubahan BELUM aman dan akan hilang kalau app ditutup. Tunggu internet menyala.', true, 8000);
+          } else {
+            tampilkanNotifSimpan('📴 Offline — perubahan disimpan di HP dan akan terkirim otomatis saat internet menyala.', true, 6000);
+          }
+        }
         simpanDB(data, bersihkanLama).then(() => {
-          tampilkanNotifSimpan('tersimpan', false);
+          if (offlineSaatSimpan) {
+            _antreanOffline = Math.max(0, _antreanOffline - 1);
+            if (_antreanOffline === 0) tampilkanNotifSimpan('✅ Perubahan offline sudah terkirim ke server.', false, 4000);
+          } else {
+            tampilkanNotifSimpan('tersimpan', false);
+          }
         }).catch((err) => {
+          if (offlineSaatSimpan) _antreanOffline = Math.max(0, _antreanOffline - 1);
           // fallback localStorage jika Firestore gagal — TANDAI beda dari
           // sukses biasa, supaya tidak mengira data aman di server padahal
           // cuma tersimpan di browser ini saja.
@@ -8625,14 +8647,24 @@ html += `</div>`;
       }, langsung ? 0 : 1500);
     }
 
-    function tampilkanNotifSimpan(teks, peringatan) {
+    let _notifTimer = null;
+    function tampilkanNotifSimpan(teks, peringatan, durasi) {
       const notif = document.getElementById('notif');
       if (!notif) return;
       notif.textContent = teks;
       notif.classList.toggle('notif-peringatan', !!peringatan);
       notif.classList.add('tampil');
-      setTimeout(() => notif.classList.remove('tampil'), peringatan ? 5000 : 2000);
+      clearTimeout(_notifTimer);   // satu timer saja, supaya pesan baru tidak dipotong timer pesan lama
+      _notifTimer = setTimeout(() => notif.classList.remove('tampil'), durasi || (peringatan ? 5000 : 2000));
     }
+
+    // Kabar saat koneksi putus / kembali (tanpa perlu menyimpan dulu)
+    window.addEventListener('offline', () => {
+      tampilkanNotifSimpan('📴 Offline — tetap bisa dibaca. Edit disimpan di HP dan dikirim saat internet menyala.', true, 5000);
+    });
+    window.addEventListener('online', () => {
+      tampilkanNotifSimpan(_antreanOffline > 0 ? '🌐 Kembali online, mengirim perubahan…' : '🌐 Kembali online', false, 3000);
+    });
 
     function ambilSemuaData() {
       const halamanList = [];
@@ -8920,6 +8952,8 @@ html += `</div>`;
     }
 
     function cekServerSetelahCache(dataCache) {
+      // Offline: cek server mustahil — jangan menahan penyimpanan (±10 dtk) menunggu server yang tak terjangkau
+      if (!navigator.onLine) { lepasTahanSimpan(); return; }
       muatDB().then(dataServer => {
         // dibandingkan di luar alur render supaya tidak menahan tampilan
         setTimeout(() => {
@@ -9005,6 +9039,7 @@ html += `</div>`;
         terapkanData(dataCache);
         try { localStorage.removeItem('gandul_data'); } catch (e) {}
         _simpanDitahan = true;
+        if (!navigator.onLine) tampilkanNotifSimpan('📴 Offline — menampilkan data tersimpan di HP.', true, 4000);
         cekServerSetelahCache(dataCache);
         return true;
       });
